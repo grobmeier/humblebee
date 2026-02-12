@@ -63,7 +63,7 @@ brews:
       email: bot@goreleaser.com
 
 scoops:
-  - bucket:
+  - repository:
       owner: grobmeier
       name: scoop-bucket
       token: "{{ .Env.SCOOP_GITHUB_TOKEN }}"
