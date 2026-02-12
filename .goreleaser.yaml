@@ -1,0 +1,71 @@
+project_name: humblebee
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: humblebee
+    main: ./cmd/humblebee
+    binary: humblebee
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - id: humblebee
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+    format_overrides:
+      - goos: windows
+        format: zip
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+
+release:
+  github:
+    owner: grobmeier
+    name: humblebee
+
+brews:
+  - name: humblebee
+    homepage: "https://humblebee.work"
+    description: "Local-first CLI time tracking"
+    folder: Formula
+    repository:
+      owner: grobmeier
+      name: homebrew-tap
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+    commit_author:
+      name: GoReleaser Bot
+      email: bot@goreleaser.com
+
+scoop:
+  bucket:
+    owner: grobmeier
+    name: scoop-bucket
+    token: "{{ .Env.SCOOP_GITHUB_TOKEN }}"
+  homepage: "https://humblebee.work"
+  description: "Local-first CLI time tracking"
+  license: ""
+

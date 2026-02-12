@@ -43,8 +43,8 @@ var helpCmd = &cobra.Command{
 			fmt.Printf("  %-10s %s\n", r.use, strings.TrimSpace(r.short))
 		}
 		fmt.Println()
+		fmt.Printf("Version: %s (%s)\n", buildInfo.Version, buildInfo.Commit)
 		fmt.Println("Use 'humblebee help [command]' or 'humblebee [command] --help' for more information.")
 		return nil
 	},
 }
-
