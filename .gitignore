@@ -13,3 +13,6 @@ dist/
 *.db
 *.sqlite
 
+# Go build/module caches (if set locally)
+.gocache/
+.gomodcache/

@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"errors"
 	"os"
 
 	"github.com/grobmeier/humblebee/internal/ui"
@@ -36,9 +35,6 @@ func Execute() error {
 	rootCmd.AddCommand(reportCmd)
 
 	if err := rootCmd.Execute(); err != nil {
-		if errors.Is(err, cobra.ErrSubCommandRequired) {
-			return err
-		}
 		ui.PrintError(err.Error())
 		return err
 	}
