@@ -30,11 +30,15 @@ type StartParams struct {
 }
 
 func (s *TimerService) Start(params StartParams) (int64, error) {
+	_, offsetSec := params.Now.Zone()
+	offsetMin := offsetSec / 60
 	e := model.TimeEntry{
 		UUID:      uuid.NewString(),
 		PersonID:  params.PersonID,
 		WorkItemID: params.WorkItemID,
 		StartTime: params.Now.UTC().Unix(),
+		TZName:     params.Now.Location().String(),
+		TZOffsetMin: offsetMin,
 		CreatedAt: params.Now.UTC().Unix(),
 	}
 	return s.entries.Start(e)
@@ -91,4 +95,3 @@ func (s *TimerService) Stop(personID int64, now time.Time, loc *time.Location) (
 		TodayTotal:   total,
 	}, nil
 }
-

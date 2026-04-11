@@ -16,3 +16,6 @@ dist/
 # Go build/module caches (if set locally)
 .gocache/
 .gomodcache/
+
+# Wails / Frontend
+frontend/node_modules/

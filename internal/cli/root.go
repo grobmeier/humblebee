@@ -26,10 +26,12 @@ func Execute() error {
 	rootCmd.PersistentFlags().Bool("no-color", false, "Disable colored output")
 
 	rootCmd.AddCommand(helpCmd)
+	rootCmd.AddCommand(doctorCmd)
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(addCmd)
 	rootCmd.AddCommand(showCmd)
 	rootCmd.AddCommand(removeCmd)
+	rootCmd.AddCommand(deleteCmd)
 	rootCmd.AddCommand(startCmd)
 	rootCmd.AddCommand(stopCmd)
 	rootCmd.AddCommand(reportCmd)

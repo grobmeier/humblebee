@@ -7,6 +7,22 @@ Local-first CLI time tracking that stays out of your way.
 - Go 1.21+
 - SQLite is embedded via `modernc.org/sqlite` (no CGO)
 
+## Install (recommended)
+
+### Homebrew (macOS/Linux)
+
+```bash
+brew tap grobmeier/tap
+brew install humblebee
+```
+
+### Scoop (Windows)
+
+```powershell
+scoop bucket add grobmeier https://github.com/grobmeier/scoop-bucket
+scoop install humblebee
+```
+
 ## Install / Build
 
 ```bash
@@ -26,6 +42,33 @@ go build -o bin/humblebee ./cmd/humblebee
 ```bash
 humblebee help
 ```
+
+## GUI (prototype)
+
+There is an early cross-platform GUI prototype (Wails v2 + React) on a separate branch (`codex/gui` while in development).
+
+See `GUI.md` for running/building it.
+
+### Doctor (health check / safe repair)
+
+`humblebee doctor` helps diagnose common issues (DB location, initialization, schema, running timer, and timezone metadata on entries).
+
+Read-only check:
+```bash
+humblebee doctor
+```
+
+Safe repairs (requires no running timer):
+```bash
+humblebee doctor --fix
+```
+
+Notes:
+- `--fix` re-runs idempotent migrations and backfills timezone fields for older (stopped) entries that predate timezone tracking.
+- Use `--dry-run` to see what would change without writing:
+  - `humblebee doctor --fix --dry-run`
+- If you want to backfill using a specific timezone name (IANA), pass `--tz-name`:
+  - `humblebee doctor --fix --tz-name America/New_York`
 
 ### Initialize
 
@@ -62,6 +105,12 @@ Notes:
 humblebee start "Client Project A > Feature Development"
 humblebee start            # starts "Default"
 humblebee stop
+```
+
+Delete time entries (interactive, hard delete):
+
+```bash
+humblebee delete
 ```
 
 Notes:
