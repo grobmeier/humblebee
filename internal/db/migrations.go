@@ -5,7 +5,7 @@ import (
 	"errors"
 )
 
-const schemaVersion = 2
+const schemaVersion = 3
 
 func IsInitialized(db *sql.DB) (bool, error) {
 	var v string
@@ -103,7 +103,28 @@ func Migrate(db *sql.DB) error {
 			created_at INTEGER NOT NULL,
 			updated_at INTEGER
 		);`,
-		`INSERT OR IGNORE INTO config (key, value, created_at) VALUES ('schema_version', '2', strftime('%s','now'));`,
+		`CREATE TABLE IF NOT EXISTS import_runs (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			export_uuid TEXT UNIQUE NOT NULL,
+			source_format TEXT NOT NULL,
+			source_user_uuid TEXT,
+			source_user_email TEXT,
+			imported_at INTEGER NOT NULL,
+			summary_json TEXT NOT NULL
+		);`,
+		`CREATE TABLE IF NOT EXISTS external_mappings (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			source_system TEXT NOT NULL,
+			source_uuid TEXT NOT NULL,
+			local_table TEXT NOT NULL,
+			local_id INTEGER NOT NULL,
+			created_at INTEGER NOT NULL,
+			updated_at INTEGER,
+			UNIQUE (source_system, source_uuid, local_table)
+		);`,
+		`CREATE INDEX IF NOT EXISTS idx_external_mappings_local
+			ON external_mappings(local_table, local_id);`,
+		`INSERT OR IGNORE INTO config (key, value, created_at) VALUES ('schema_version', '3', strftime('%s','now'));`,
 		`INSERT OR IGNORE INTO config (key, value, created_at) VALUES ('initialized_at', strftime('%s','now'), strftime('%s','now'));`,
 	}
 

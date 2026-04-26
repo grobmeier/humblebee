@@ -35,6 +35,7 @@ func Execute() error {
 	rootCmd.AddCommand(startCmd)
 	rootCmd.AddCommand(stopCmd)
 	rootCmd.AddCommand(reportCmd)
+	rootCmd.AddCommand(importCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		ui.PrintError(err.Error())
