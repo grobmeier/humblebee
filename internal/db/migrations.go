@@ -5,7 +5,7 @@ import (
 	"errors"
 )
 
-const schemaVersion = 1
+const schemaVersion = 3
 
 func IsInitialized(db *sql.DB) (bool, error) {
 	var v string
@@ -82,6 +82,8 @@ func Migrate(db *sql.DB) error {
 			start_time INTEGER NOT NULL,
 			end_time INTEGER,
 			duration INTEGER,
+			tz_name TEXT NOT NULL DEFAULT '',
+			tz_offset_minutes INTEGER NOT NULL DEFAULT 0,
 			created_at INTEGER NOT NULL,
 			updated_at INTEGER,
 			FOREIGN KEY (person_id) REFERENCES persons(id) ON DELETE CASCADE,
@@ -101,7 +103,28 @@ func Migrate(db *sql.DB) error {
 			created_at INTEGER NOT NULL,
 			updated_at INTEGER
 		);`,
-		`INSERT OR IGNORE INTO config (key, value, created_at) VALUES ('schema_version', '1', strftime('%s','now'));`,
+		`CREATE TABLE IF NOT EXISTS import_runs (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			export_uuid TEXT UNIQUE NOT NULL,
+			source_format TEXT NOT NULL,
+			source_user_uuid TEXT,
+			source_user_email TEXT,
+			imported_at INTEGER NOT NULL,
+			summary_json TEXT NOT NULL
+		);`,
+		`CREATE TABLE IF NOT EXISTS external_mappings (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			source_system TEXT NOT NULL,
+			source_uuid TEXT NOT NULL,
+			local_table TEXT NOT NULL,
+			local_id INTEGER NOT NULL,
+			created_at INTEGER NOT NULL,
+			updated_at INTEGER,
+			UNIQUE (source_system, source_uuid, local_table)
+		);`,
+		`CREATE INDEX IF NOT EXISTS idx_external_mappings_local
+			ON external_mappings(local_table, local_id);`,
+		`INSERT OR IGNORE INTO config (key, value, created_at) VALUES ('schema_version', '3', strftime('%s','now'));`,
 		`INSERT OR IGNORE INTO config (key, value, created_at) VALUES ('initialized_at', strftime('%s','now'), strftime('%s','now'));`,
 	}
 
@@ -111,6 +134,11 @@ func Migrate(db *sql.DB) error {
 		}
 	}
 
+	// Ensure new columns exist on older databases.
+	if err := ensureTimeEntryTZColumns(tx); err != nil {
+		return err
+	}
+
 	// Basic schema_version check; future migrations can build on this.
 	_, err = tx.Exec(`UPDATE config SET value = ? WHERE key='schema_version'`, schemaVersion)
 	if err != nil {
@@ -118,4 +146,44 @@ func Migrate(db *sql.DB) error {
 	}
 
 	return tx.Commit()
+}
+
+func ensureTimeEntryTZColumns(tx *sql.Tx) error {
+	type col struct {
+		name string
+	}
+	rows, err := tx.Query(`PRAGMA table_info(time_entries);`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	existing := map[string]bool{}
+	for rows.Next() {
+		var cid int
+		var name string
+		var ctype string
+		var notnull int
+		var dflt sql.NullString
+		var pk int
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
+			return err
+		}
+		existing[name] = true
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	if !existing["tz_name"] {
+		if _, err := tx.Exec(`ALTER TABLE time_entries ADD COLUMN tz_name TEXT NOT NULL DEFAULT '';`); err != nil {
+			return err
+		}
+	}
+	if !existing["tz_offset_minutes"] {
+		if _, err := tx.Exec(`ALTER TABLE time_entries ADD COLUMN tz_offset_minutes INTEGER NOT NULL DEFAULT 0;`); err != nil {
+			return err
+		}
+	}
+	return nil
 }

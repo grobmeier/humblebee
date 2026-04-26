@@ -68,3 +68,17 @@ func SplitByLocalDay(entryStartUTC, entryEndUTC int64, loc *time.Location) map[s
 	return out
 }
 
+func LocationForEntry(tzName string, tzOffsetMin int, fallback *time.Location) *time.Location {
+	if tzName != "" && tzName != "Local" {
+		if loc, err := time.LoadLocation(tzName); err == nil && loc != nil {
+			return loc
+		}
+	}
+	if tzOffsetMin != 0 {
+		return time.FixedZone("entry", tzOffsetMin*60)
+	}
+	if fallback != nil {
+		return fallback
+	}
+	return time.Local
+}

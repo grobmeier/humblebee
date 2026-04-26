@@ -31,3 +31,18 @@ func TestSplitByLocalDay(t *testing.T) {
 	}
 }
 
+func TestLocationForEntry(t *testing.T) {
+	loc := LocationForEntry("America/New_York", 0, time.UTC)
+	if loc == nil {
+		t.Fatalf("expected location")
+	}
+	// If the location database is present, this should load and be stable.
+	if loc.String() != "America/New_York" {
+		t.Fatalf("got %q", loc.String())
+	}
+
+	fixed := LocationForEntry("", -300, time.UTC)
+	if fixed == nil {
+		t.Fatalf("expected fixed location")
+	}
+}

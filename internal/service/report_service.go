@@ -75,17 +75,19 @@ func (s *ReportService) Monthly(personID int64, year int, month time.Month, now 
 		}
 		own[id] += secs
 
-		perDay := timeutil.SplitByLocalDay(e.StartTime, *e.EndTime, loc)
+		entryLoc := timeutil.LocationForEntry(e.TZName, e.TZOffsetMin, loc)
+		perDay := timeutil.SplitByLocalDay(e.StartTime, *e.EndTime, entryLoc)
 		for day, dur := range perDay {
 			if dur <= 0 {
 				continue
 			}
 			// Only count days within the month window.
-			t, err := time.ParseInLocation("2006-01-02", day, loc)
+			t, err := time.ParseInLocation("2006-01-02", day, entryLoc)
 			if err != nil {
 				continue
 			}
-			if !t.Before(window.Start) && t.Before(window.End) {
+			tUTC := t.UTC()
+			if !tUTC.Before(window.Start.UTC()) && tUTC.Before(window.End.UTC()) {
 				daySet[day] = struct{}{}
 			}
 		}
@@ -203,4 +205,3 @@ func (s *ReportService) Monthly(personID int64, year int, month time.Month, now 
 		AvgPerDay:   avg,
 	}, nil
 }
-

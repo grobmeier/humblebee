@@ -19,6 +19,18 @@ func openDB() (*sql.DB, string, error) {
 	if err != nil {
 		return nil, "", err
 	}
+	initialized, err := db.IsInitialized(database)
+	if err != nil {
+		_ = database.Close()
+		return nil, "", err
+	}
+	if initialized {
+		// Apply idempotent migrations on every run for already-initialized databases.
+		if err := db.Migrate(database); err != nil {
+			_ = database.Close()
+			return nil, "", err
+		}
+	}
 	return database, path, nil
 }
 
@@ -44,4 +56,3 @@ func defaultPersonID(database *sql.DB) (int64, error) {
 	}
 	return p.ID, nil
 }
-
