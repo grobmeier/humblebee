@@ -27,6 +27,15 @@ h2 {
   color: #6b7280;
 }
 
+.eyebrow {
+  margin: 0 0 8px 0;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
 .card {
   border: 1px solid #e5e7eb;
   border-radius: 10px;
@@ -116,3 +125,57 @@ button:disabled {
   font-size: 12px;
 }
 
+.recovery-screen {
+  min-height: calc(100vh - 48px);
+  display: grid;
+  place-items: center;
+}
+
+.recovery-card {
+  max-width: 620px;
+}
+
+.recovery-card p {
+  line-height: 1.5;
+}
+
+.path-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 16px 0;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+}
+
+.path-box span {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.path-box code {
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+
+.technical-details {
+  margin-top: 16px;
+}
+
+.technical-details summary {
+  cursor: pointer;
+  color: #374151;
+  font-size: 14px;
+}
+
+.technical-details pre {
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 8px;
+  background: #111827;
+  color: #f9fafb;
+  overflow-x: auto;
+  white-space: pre-wrap;
+}

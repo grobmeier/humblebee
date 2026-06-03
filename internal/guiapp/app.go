@@ -49,9 +49,9 @@ type WorkItem struct {
 }
 
 type StopResult struct {
-	WorkItemName     string `json:"workItemName"`
-	DurationSeconds  int64  `json:"durationSeconds"`
-	TodayTotalSeconds int64 `json:"todayTotalSeconds"`
+	WorkItemName      string `json:"workItemName"`
+	DurationSeconds   int64  `json:"durationSeconds"`
+	TodayTotalSeconds int64  `json:"todayTotalSeconds"`
 }
 
 func (a *App) GetDashboard() (*Dashboard, error) {
@@ -264,17 +264,17 @@ func (a *App) openDB() (*sql.DB, string, error) {
 	}
 	database, err := db.Open(dbPath)
 	if err != nil {
-		return nil, "", err
+		return nil, "", db.WrapBusyError(dbPath, err)
 	}
 	initialized, err := db.IsInitialized(database)
 	if err != nil {
 		_ = database.Close()
-		return nil, "", err
+		return nil, "", db.WrapBusyError(dbPath, err)
 	}
 	if initialized {
 		if err := db.Migrate(database); err != nil {
 			_ = database.Close()
-			return nil, "", err
+			return nil, "", db.WrapBusyError(dbPath, err)
 		}
 	}
 	return database, dbPath, nil
@@ -302,4 +302,3 @@ func (a *App) defaultPersonID(database *sql.DB) (int64, error) {
 	}
 	return p.ID, nil
 }
-

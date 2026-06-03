@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import "./app.css";
 import { GetDashboard, Init, ListWorkItems, Start, Stop } from "../wailsjs/go/guiapp/App";
+import { Quit } from "../wailsjs/runtime/runtime";
 
 type Dashboard = {
   initialized: boolean;
@@ -12,11 +13,27 @@ type Dashboard = {
 
 type WorkItem = { id: number; name: string; parentId?: number | null; depth: number };
 
+type DatabaseBusyError = {
+  dbPath: string;
+  details: string;
+};
+
 function formatSeconds(total: number): string {
   const seconds = Math.max(0, Math.floor(total));
   if (seconds < 60) return `${seconds}s`;
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
   return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
+}
+
+function parseDatabaseBusyError(error: unknown): DatabaseBusyError | null {
+  const message = String(error);
+  if (!message.includes("HUMBLEBEE_DATABASE_BUSY")) {
+    return null;
+  }
+
+  const dbPath = message.match(/Database:\s*(.+)/)?.[1]?.trim() ?? "Unknown";
+  const details = message.match(/Details:\s*([\s\S]+)/)?.[1]?.trim() ?? message;
+  return { dbPath, details };
 }
 
 export default function App() {
@@ -25,6 +42,7 @@ export default function App() {
   const [email, setEmail] = useState("");
   const [selectedWorkItemId, setSelectedWorkItemId] = useState<number>(0);
   const [error, setError] = useState<string>("");
+  const [databaseBusyError, setDatabaseBusyError] = useState<DatabaseBusyError | null>(null);
 
   const runningLabel = useMemo(() => {
     if (!dashboard?.running) return "Not running";
@@ -34,6 +52,7 @@ export default function App() {
 
   async function refresh() {
     setError("");
+    setDatabaseBusyError(null);
     const d = await GetDashboard();
     setDashboard(d);
     if (d.initialized) {
@@ -42,8 +61,18 @@ export default function App() {
     }
   }
 
+  function handleError(error: unknown) {
+    const busy = parseDatabaseBusyError(error);
+    if (busy) {
+      setDatabaseBusyError(busy);
+      setError("");
+      return;
+    }
+    setError(String(error));
+  }
+
   useEffect(() => {
-    refresh().catch((e) => setError(String(e)));
+    refresh().catch(handleError);
   }, []);
 
   async function onInit() {
@@ -52,7 +81,7 @@ export default function App() {
       await Init(email);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      handleError(e);
     }
   }
 
@@ -62,7 +91,7 @@ export default function App() {
       await Start(selectedWorkItemId);
       await refresh();
     } catch (e) {
-      setError(String(e));
+      handleError(e);
     }
   }
 
@@ -72,8 +101,40 @@ export default function App() {
       await Stop();
       await refresh();
     } catch (e) {
-      setError(String(e));
+      handleError(e);
     }
+  }
+
+  if (databaseBusyError) {
+    return (
+      <div className="container recovery-screen">
+        <div className="card recovery-card">
+          <p className="eyebrow">Local database</p>
+          <h1>Database is in use</h1>
+          <p>
+            HumbleBee cannot access the local database right now. Another HumbleBee window, terminal command,
+            backup, or sync tool may still be using it.
+          </p>
+          <div className="path-box">
+            <span>Database</span>
+            <code>{databaseBusyError.dbPath}</code>
+          </div>
+          <p className="muted">
+            Close other HumbleBee windows or wait for the other process to finish, then retry.
+          </p>
+          <details className="technical-details">
+            <summary>Technical details</summary>
+            <pre>{databaseBusyError.details}</pre>
+          </details>
+          <div className="row">
+            <button onClick={() => refresh().catch(handleError)}>Retry</button>
+            <button className="secondary" onClick={Quit}>
+              Quit HumbleBee
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!dashboard) {
@@ -140,7 +201,7 @@ export default function App() {
             <button disabled={!dashboard.running} onClick={onStop}>
               Stop
             </button>
-            <button className="secondary" onClick={() => refresh().catch((e) => setError(String(e)))}>
+            <button className="secondary" onClick={() => refresh().catch(handleError)}>
               Refresh
             </button>
           </div>
@@ -163,4 +224,3 @@ export default function App() {
     </div>
   );
 }
-
