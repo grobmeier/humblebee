@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"errors"
+	"strconv"
 )
 
 const schemaVersion = 3
@@ -28,6 +29,11 @@ func IsInitialized(db *sql.DB) (bool, error) {
 }
 
 func Migrate(db *sql.DB) error {
+	current, err := currentSchemaVersion(db)
+	if err == nil && current >= schemaVersion {
+		return nil
+	}
+
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -146,6 +152,14 @@ func Migrate(db *sql.DB) error {
 	}
 
 	return tx.Commit()
+}
+
+func currentSchemaVersion(db *sql.DB) (int, error) {
+	var value string
+	if err := db.QueryRow(`SELECT value FROM config WHERE key='schema_version'`).Scan(&value); err != nil {
+		return 0, err
+	}
+	return strconv.Atoi(value)
 }
 
 func ensureTimeEntryTZColumns(tx *sql.Tx) error {

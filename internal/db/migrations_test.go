@@ -99,3 +99,26 @@ func TestMigrateAddsTimeEntryTZColumnsToExistingDB(t *testing.T) {
 		t.Fatalf("expected tz columns to exist, got %#v", cols)
 	}
 }
+
+func TestMigrateSkipsCurrentSchema(t *testing.T) {
+	database := openMemory(t)
+	defer database.Close()
+
+	if err := Migrate(database); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := database.Exec(`CREATE TABLE migration_probe (id INTEGER PRIMARY KEY);`); err != nil {
+		t.Fatal(err)
+	}
+	if err := Migrate(database); err != nil {
+		t.Fatal(err)
+	}
+
+	var count int
+	if err := database.QueryRow(`SELECT count(*) FROM sqlite_master WHERE type='table' AND name='migration_probe'`).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("expected current schema migration to leave unrelated tables unchanged")
+	}
+}
