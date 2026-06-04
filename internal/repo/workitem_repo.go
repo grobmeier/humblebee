@@ -83,6 +83,37 @@ func (r *WorkItemRepo) ListAll(personID int64) ([]model.WorkItem, error) {
 	return out, nil
 }
 
+func (r *WorkItemRepo) ListProjectItems(personID int64) ([]model.WorkItem, error) {
+	rows, err := r.db.Query(`
+		SELECT id, uuid, person_id, name, description, parent_id, path, depth, status, color, created_at, updated_at
+		FROM workitems
+		WHERE person_id = ? AND status <> 'DELETED'
+	`, personID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []model.WorkItem
+	for rows.Next() {
+		item, err := scanWorkItem(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Depth != out[j].Depth {
+			return out[i].Depth < out[j].Depth
+		}
+		return strings.ToLower(out[i].Name) < strings.ToLower(out[j].Name)
+	})
+	return out, nil
+}
+
 func (r *WorkItemRepo) FindByNameUnderParent(personID int64, parentID *int64, name string) (*model.WorkItem, error) {
 	var row *sql.Row
 	if parentID == nil {
@@ -175,6 +206,44 @@ func (r *WorkItemRepo) Create(params CreateWorkItemParams) (*model.WorkItem, err
 	return r.GetByID(params.PersonID, id)
 }
 
+func (r *WorkItemRepo) UpdateName(personID, workItemID int64, name string) (*model.WorkItem, error) {
+	res, err := r.db.Exec(`
+		UPDATE workitems
+		SET name = ?, updated_at = strftime('%s','now')
+		WHERE person_id = ? AND id = ? AND status = 'ACTIVE'
+	`, name, personID, workItemID)
+	if err != nil {
+		return nil, err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return nil, err
+	}
+	if affected == 0 {
+		return nil, errors.New("work item not found")
+	}
+	return r.GetByID(personID, workItemID)
+}
+
+func (r *WorkItemRepo) SetStatus(personID, workItemID int64, status model.WorkItemStatus) (*model.WorkItem, error) {
+	res, err := r.db.Exec(`
+		UPDATE workitems
+		SET status = ?, updated_at = strftime('%s','now')
+		WHERE person_id = ? AND id = ?
+	`, string(status), personID, workItemID)
+	if err != nil {
+		return nil, err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return nil, err
+	}
+	if affected == 0 {
+		return nil, errors.New("work item not found")
+	}
+	return r.GetByID(personID, workItemID)
+}
+
 func (r *WorkItemRepo) ArchiveSubtree(personID, workItemID int64) error {
 	var path sql.NullString
 	var name string
@@ -201,6 +270,97 @@ func (r *WorkItemRepo) ArchiveSubtree(personID, workItemID int64) error {
 		  AND (path = ? OR path LIKE ?)
 	`, personID, p, like)
 	return err
+}
+
+func (r *WorkItemRepo) DeleteProjectAndTimeEntries(personID, projectID int64) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			_ = tx.Rollback()
+		}
+	}()
+
+	var path sql.NullString
+	var name string
+	var parentID sql.NullInt64
+	if err := tx.QueryRow(`
+		SELECT path, name, parent_id
+		FROM workitems
+		WHERE person_id = ? AND id = ? AND status <> 'DELETED'
+	`, personID, projectID).Scan(&path, &name, &parentID); err != nil {
+		return err
+	}
+	if parentID.Valid {
+		return errors.New("project not found")
+	}
+	if strings.EqualFold(name, "Default") {
+		return errors.New("cannot remove the 'Default' work item")
+	}
+	if !path.Valid || path.String == "" {
+		return errors.New("work item missing path")
+	}
+
+	p := path.String
+	like := p + "/%"
+	if _, err := tx.Exec(`
+		DELETE FROM closed_stopwatch_workitems
+		WHERE person_id = ?
+		  AND workitem_id IN (
+			SELECT id FROM workitems
+			WHERE person_id = ? AND (path = ? OR path LIKE ?)
+		  )
+	`, personID, personID, p, like); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`
+		DELETE FROM external_mappings
+		WHERE local_table = 'time_entries'
+		  AND local_id IN (
+			SELECT id FROM time_entries
+			WHERE person_id = ?
+			  AND workitem_id IN (
+				SELECT id FROM workitems
+				WHERE person_id = ? AND (path = ? OR path LIKE ?)
+			  )
+		  )
+	`, personID, personID, p, like); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`
+		DELETE FROM time_entries
+		WHERE person_id = ?
+		  AND workitem_id IN (
+			SELECT id FROM workitems
+			WHERE person_id = ? AND (path = ? OR path LIKE ?)
+		  )
+	`, personID, personID, p, like); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`
+		DELETE FROM external_mappings
+		WHERE local_table = 'workitems'
+		  AND local_id IN (
+			SELECT id FROM workitems
+			WHERE person_id = ? AND (path = ? OR path LIKE ?)
+		  )
+	`, personID, p, like); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`
+		DELETE FROM workitems
+		WHERE person_id = ? AND (path = ? OR path LIKE ?)
+	`, personID, p, like); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	committed = true
+	return nil
 }
 
 type scanner interface {

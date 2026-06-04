@@ -199,6 +199,7 @@ export namespace guiapp {
 	    name: string;
 	    parentId?: number;
 	    depth: number;
+	    status: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new WorkItem(source);
@@ -210,6 +211,7 @@ export namespace guiapp {
 	        this.name = source["name"];
 	        this.parentId = source["parentId"];
 	        this.depth = source["depth"];
+	        this.status = source["status"];
 	    }
 	}
 

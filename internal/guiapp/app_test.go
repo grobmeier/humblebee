@@ -199,6 +199,201 @@ func TestDeleteTimeEntryDeletesCompletedEntry(t *testing.T) {
 	}
 }
 
+func TestCreateProjectUpdateProjectAndCreateTask(t *testing.T) {
+	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
+
+	app := New()
+	if err := app.Init("user@example.com"); err != nil {
+		t.Fatal(err)
+	}
+
+	project, err := app.CreateProject("Client A")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if project.ID == 0 || project.Name != "Client A" || project.ParentID != nil || project.Depth != 0 {
+		t.Fatalf("unexpected project: %#v", project)
+	}
+
+	updated, err := app.UpdateProject(project.ID, "Client B")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Name != "Client B" {
+		t.Fatalf("expected renamed project, got %#v", updated)
+	}
+
+	task, err := app.CreateTask(project.ID, "Research")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if task.ParentID == nil || *task.ParentID != project.ID || task.Depth != 1 {
+		t.Fatalf("unexpected task: %#v", task)
+	}
+
+	items, err := app.ListWorkItems()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !containsGUIWorkItem(items, project.ID, "Client B") {
+		t.Fatalf("expected renamed project in work item list: %#v", items)
+	}
+	if !containsGUIWorkItem(items, task.ID, "Research") {
+		t.Fatalf("expected task in work item list: %#v", items)
+	}
+}
+
+func TestCreateTaskRejectsTaskParent(t *testing.T) {
+	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
+
+	app := New()
+	if err := app.Init("user@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	project, err := app.CreateProject("Client")
+	if err != nil {
+		t.Fatal(err)
+	}
+	task, err := app.CreateTask(project.ID, "Research")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.CreateTask(task.ID, "Nested"); err == nil {
+		t.Fatal("expected nested task creation to fail")
+	}
+}
+
+func TestSetTaskActiveHidesAndRestoresTaskInStopwatchWorkItems(t *testing.T) {
+	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
+
+	app := New()
+	if err := app.Init("user@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	project, err := app.CreateProject("Client")
+	if err != nil {
+		t.Fatal(err)
+	}
+	task, err := app.CreateTask(project.ID, "Research")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hidden, err := app.SetTaskActive(task.ID, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hidden.Status != string(model.WorkItemStatusArchived) {
+		t.Fatalf("expected archived task, got %#v", hidden)
+	}
+	activeItems, err := app.ListWorkItems()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if containsGUIWorkItem(activeItems, task.ID, "Research") {
+		t.Fatalf("expected archived task to be hidden from active work items: %#v", activeItems)
+	}
+	projectItems, err := app.ListProjectWorkItems()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !containsGUIWorkItem(projectItems, task.ID, "Research") {
+		t.Fatalf("expected archived task to stay visible in project management: %#v", projectItems)
+	}
+
+	restored, err := app.SetTaskActive(task.ID, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if restored.Status != string(model.WorkItemStatusActive) {
+		t.Fatalf("expected active task, got %#v", restored)
+	}
+	activeItems, err = app.ListWorkItems()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !containsGUIWorkItem(activeItems, task.ID, "Research") {
+		t.Fatalf("expected restored task in active work items: %#v", activeItems)
+	}
+}
+
+func TestDeleteProjectDeletesTasksAndTimeEntries(t *testing.T) {
+	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
+
+	app := New()
+	if err := app.Init("user@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	project, err := app.CreateProject("Client")
+	if err != nil {
+		t.Fatal(err)
+	}
+	task, err := app.CreateTask(project.ID, "Research")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.CreateTimeEntry(CreateTimeEntryRequest{
+		WorkItemID:  task.ID,
+		StartDate:   "2026-05-12",
+		StartTime:   "09:00",
+		EndDate:     "2026-05-12",
+		EndTime:     "10:00",
+		Description: "Project time",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := app.DeleteProject(project.ID); err != nil {
+		t.Fatal(err)
+	}
+	activeItems, err := app.ListWorkItems()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if containsGUIWorkItem(activeItems, project.ID, "Client") || containsGUIWorkItem(activeItems, task.ID, "Research") {
+		t.Fatalf("expected deleted project subtree to be absent from active work items: %#v", activeItems)
+	}
+	projectItems, err := app.ListProjectWorkItems()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if containsGUIWorkItem(projectItems, project.ID, "Client") || containsGUIWorkItem(projectItems, task.ID, "Research") {
+		t.Fatalf("expected deleted project subtree to be absent from project management: %#v", projectItems)
+	}
+	day, err := app.GetTimeDay("2026-05-12")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(day.Entries) != 0 {
+		t.Fatalf("expected deleting project to delete its time entries, got %d", len(day.Entries))
+	}
+}
+
+func TestUpdateProjectRejectsDefaultWorkItem(t *testing.T) {
+	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
+
+	app := New()
+	if err := app.Init("user@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	items, err := app.ListWorkItems()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var defaultID int64
+	for _, item := range items {
+		if item.Name == "Default" && item.ParentID == nil {
+			defaultID = item.ID
+		}
+	}
+	if defaultID == 0 {
+		t.Fatal("expected Default work item")
+	}
+	if _, err := app.UpdateProject(defaultID, "Renamed"); err == nil {
+		t.Fatal("expected Default project update to fail")
+	}
+}
+
 func createGUIAppTestWorkItem(t *testing.T, app *App, name string) int64 {
 	t.Helper()
 	database, _, err := app.openDB()
@@ -220,6 +415,15 @@ func createGUIAppTestWorkItem(t *testing.T, app *App, name string) int64 {
 		t.Fatal(err)
 	}
 	return item.ID
+}
+
+func containsGUIWorkItem(items []WorkItem, id int64, name string) bool {
+	for _, item := range items {
+		if item.ID == id && item.Name == name {
+			return true
+		}
+	}
+	return false
 }
 
 func createGUIAppTestCompletedEntry(t *testing.T, app *App, workItemID int64, start int64, end int64) {

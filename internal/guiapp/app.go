@@ -61,6 +61,7 @@ type WorkItem struct {
 	Name     string `json:"name"`
 	ParentID *int64 `json:"parentId"`
 	Depth    int    `json:"depth"`
+	Status   string `json:"status"`
 }
 
 type StopResult struct {
@@ -610,12 +611,7 @@ func (a *App) ListWorkItems() ([]WorkItem, error) {
 	out := make([]WorkItem, 0, len(items))
 	for _, it := range items {
 		// Expose Default row too (GUI can choose to hide it and use Default semantics).
-		out = append(out, WorkItem{
-			ID:       it.ID,
-			Name:     it.Name,
-			ParentID: it.ParentID,
-			Depth:    it.Depth,
-		})
+		out = append(out, *workItemDTO(it))
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].Depth != out[j].Depth {
@@ -624,6 +620,182 @@ func (a *App) ListWorkItems() ([]WorkItem, error) {
 		return strings.ToLower(out[i].Name) < strings.ToLower(out[j].Name)
 	})
 	return out, nil
+}
+
+func (a *App) ListProjectWorkItems() ([]WorkItem, error) {
+	database, _, err := a.openDB()
+	if err != nil {
+		return nil, err
+	}
+	defer database.Close()
+	if err := a.requireInitialized(database); err != nil {
+		return nil, err
+	}
+	personID, err := a.defaultPersonID(database)
+	if err != nil {
+		return nil, err
+	}
+	items, err := repo.NewWorkItemRepo(database).ListProjectItems(personID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]WorkItem, 0, len(items))
+	for _, item := range items {
+		out = append(out, *workItemDTO(item))
+	}
+	return out, nil
+}
+
+func (a *App) CreateProject(name string) (*WorkItem, error) {
+	return a.createWorkItem(name, nil)
+}
+
+func (a *App) UpdateProject(projectID int64, name string) (*WorkItem, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, errors.New("project name is required")
+	}
+
+	database, _, err := a.openDB()
+	if err != nil {
+		return nil, err
+	}
+	defer database.Close()
+	if err := a.requireInitialized(database); err != nil {
+		return nil, err
+	}
+	personID, err := a.defaultPersonID(database)
+	if err != nil {
+		return nil, err
+	}
+	itemsRepo := repo.NewWorkItemRepo(database)
+	project, err := itemsRepo.GetByID(personID, projectID)
+	if err != nil {
+		return nil, err
+	}
+	if project == nil || project.ParentID != nil || strings.EqualFold(project.Name, "Default") {
+		return nil, errors.New("project not found")
+	}
+	updated, err := itemsRepo.UpdateName(personID, projectID, name)
+	if err != nil {
+		return nil, err
+	}
+	return workItemDTO(*updated), nil
+}
+
+func (a *App) DeleteProject(projectID int64) error {
+	if projectID == 0 {
+		return errors.New("project is required")
+	}
+	database, _, err := a.openDB()
+	if err != nil {
+		return err
+	}
+	defer database.Close()
+	if err := a.requireInitialized(database); err != nil {
+		return err
+	}
+	personID, err := a.defaultPersonID(database)
+	if err != nil {
+		return err
+	}
+	itemsRepo := repo.NewWorkItemRepo(database)
+	project, err := itemsRepo.GetByID(personID, projectID)
+	if err != nil {
+		return err
+	}
+	if project == nil || project.ParentID != nil || strings.EqualFold(project.Name, "Default") {
+		return errors.New("project not found")
+	}
+	return itemsRepo.DeleteProjectAndTimeEntries(personID, projectID)
+}
+
+func (a *App) CreateTask(projectID int64, name string) (*WorkItem, error) {
+	if projectID == 0 {
+		return nil, errors.New("project is required")
+	}
+	return a.createWorkItem(name, &projectID)
+}
+
+func (a *App) SetTaskActive(taskID int64, active bool) (*WorkItem, error) {
+	if taskID == 0 {
+		return nil, errors.New("task is required")
+	}
+	database, _, err := a.openDB()
+	if err != nil {
+		return nil, err
+	}
+	defer database.Close()
+	if err := a.requireInitialized(database); err != nil {
+		return nil, err
+	}
+	personID, err := a.defaultPersonID(database)
+	if err != nil {
+		return nil, err
+	}
+	itemsRepo := repo.NewWorkItemRepo(database)
+	task, err := itemsRepo.GetByID(personID, taskID)
+	if err != nil {
+		return nil, err
+	}
+	if task == nil || task.ParentID == nil {
+		return nil, errors.New("task not found")
+	}
+	status := model.WorkItemStatusArchived
+	if active {
+		status = model.WorkItemStatusActive
+	}
+	updated, err := itemsRepo.SetStatus(personID, taskID, status)
+	if err != nil {
+		return nil, err
+	}
+	return workItemDTO(*updated), nil
+}
+
+func (a *App) createWorkItem(name string, parentID *int64) (*WorkItem, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, errors.New("work item name is required")
+	}
+
+	database, _, err := a.openDB()
+	if err != nil {
+		return nil, err
+	}
+	defer database.Close()
+	if err := a.requireInitialized(database); err != nil {
+		return nil, err
+	}
+	personID, err := a.defaultPersonID(database)
+	if err != nil {
+		return nil, err
+	}
+
+	depth := 0
+	itemsRepo := repo.NewWorkItemRepo(database)
+	if parentID != nil {
+		parent, err := itemsRepo.GetByID(personID, *parentID)
+		if err != nil {
+			return nil, err
+		}
+		if parent == nil || parent.ParentID != nil || strings.EqualFold(parent.Name, "Default") {
+			return nil, errors.New("project not found")
+		}
+		depth = parent.Depth + 1
+	}
+
+	created, err := itemsRepo.Create(repo.CreateWorkItemParams{
+		PersonID: personID,
+		UUID:     uuid.NewString(),
+		Name:     name,
+		ParentID: parentID,
+		Depth:    depth,
+		Created:  time.Now().UTC().Unix(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return workItemDTO(*created), nil
 }
 
 func (a *App) Start(workItemID int64) error {
@@ -683,6 +855,16 @@ func (a *App) Start(workItemID int64) error {
 		return stopwatchOverlapError(running, now, time.Local)
 	}
 	return timerRepo.Stop(running.ID, end, end-running.StartTime)
+}
+
+func workItemDTO(item model.WorkItem) *WorkItem {
+	return &WorkItem{
+		ID:       item.ID,
+		Name:     item.Name,
+		ParentID: item.ParentID,
+		Depth:    item.Depth,
+		Status:   string(item.Status),
+	}
 }
 
 func (a *App) Stop() (*StopResult, error) {
