@@ -9,6 +9,7 @@ type TimeEntry struct {
 	StartTime   int64
 	EndTime     *int64
 	Duration    *int64
+	EntrySource string
 	TZName      string
 	TZOffsetMin int
 	CreatedAt   int64

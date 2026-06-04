@@ -33,13 +33,13 @@ func (s *TimerService) Start(params StartParams) (int64, error) {
 	_, offsetSec := params.Now.Zone()
 	offsetMin := offsetSec / 60
 	e := model.TimeEntry{
-		UUID:      uuid.NewString(),
-		PersonID:  params.PersonID,
-		WorkItemID: params.WorkItemID,
-		StartTime: params.Now.UTC().Unix(),
-		TZName:     params.Now.Location().String(),
+		UUID:        uuid.NewString(),
+		PersonID:    params.PersonID,
+		WorkItemID:  params.WorkItemID,
+		StartTime:   params.Now.UTC().Unix(),
+		TZName:      params.Now.Location().String(),
 		TZOffsetMin: offsetMin,
-		CreatedAt: params.Now.UTC().Unix(),
+		CreatedAt:   params.Now.UTC().Unix(),
 	}
 	return s.entries.Start(e)
 }
@@ -62,6 +62,13 @@ func (s *TimerService) Stop(personID int64, now time.Time, loc *time.Location) (
 	end := now.UTC().Unix()
 	if end <= running.StartTime {
 		return nil, errors.New("invalid timer end time")
+	}
+	overlaps, err := s.entries.HasOverlap(personID, running.StartTime, end)
+	if err != nil {
+		return nil, err
+	}
+	if overlaps {
+		return nil, errors.New("time entry overlaps with an existing entry")
 	}
 	duration := end - running.StartTime
 	if err := s.entries.Stop(running.ID, end, duration); err != nil {
