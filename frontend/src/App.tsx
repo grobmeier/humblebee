@@ -2,15 +2,21 @@ import { FormEvent, useEffect, useState } from "react";
 import "./app.css";
 import {
   CreateTimeEntry,
+  CreateProject,
+  CreateTask,
+  DeleteProject,
   DeleteTimeEntry,
   DiscardStopwatch,
   GetDashboard,
   GetTimeDay,
   Init,
+  ListProjectWorkItems,
   ListStopwatches,
   ListWorkItems,
+  SetTaskActive,
   Start,
   Stop,
+  UpdateProject,
   UpdateTimeEntry
 } from "../wailsjs/go/guiapp/App";
 import { Quit } from "../wailsjs/runtime/runtime";
@@ -24,6 +30,7 @@ import { formatInputDate, formatTime } from "./dashboard/dateFormat";
 import { TimeEntryModal } from "./dashboard/TimeEntryModal";
 import type { TimeEntryFormState } from "./dashboard/timeEntryTypes";
 import { type Language, translations } from "./dashboard/translations";
+import { ProjectsPage } from "./projects/ProjectsPage";
 
 type Dashboard = {
   initialized: boolean;
@@ -33,7 +40,7 @@ type Dashboard = {
   todayTotalSeconds: number;
 };
 
-type WorkItem = { id: number; name: string; parentId?: number | null; depth: number };
+type WorkItem = { id: number; name: string; parentId?: number | null; depth: number; status?: string };
 
 type DatabaseBusyError = {
   dbPath: string;
@@ -49,6 +56,8 @@ type StopwatchOverlapError = {
   endTime: string;
   details: string;
 };
+
+type AppPage = "dashboard" | "reports" | "projects";
 
 function formatHoursMinutes(total: number): string {
   const seconds = Math.max(0, Math.floor(total));
@@ -88,6 +97,7 @@ function parseStopwatchOverlapError(error: unknown): StopwatchOverlapError | nul
 export default function App() {
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
+  const [projectWorkItems, setProjectWorkItems] = useState<WorkItem[]>([]);
   const [email, setEmail] = useState("");
   const [selectedWorkItemId, setSelectedWorkItemId] = useState<number>(0);
   const [error, setError] = useState<string>("");
@@ -104,11 +114,22 @@ export default function App() {
   const [isStopwatchConfirmationModal, setIsStopwatchConfirmationModal] = useState(false);
   const [confirmationStopwatchId, setConfirmationStopwatchId] = useState<number | null>(null);
   const [language, setLanguage] = useState<Language>("de");
+  const [activePage, setActivePage] = useState<AppPage>(() => pageFromHash(window.location.hash));
+  const [selectedProjectPageProjectId, setSelectedProjectPageProjectId] = useState<number>(0);
   const t = translations[language];
 
   useEffect(() => {
     document.documentElement.lang = language === "de" ? "de" : "en";
   }, [language]);
+
+  useEffect(() => {
+    function syncPageFromHash() {
+      setActivePage(pageFromHash(window.location.hash));
+    }
+
+    window.addEventListener("hashchange", syncPageFromHash);
+    return () => window.removeEventListener("hashchange", syncPageFromHash);
+  }, []);
 
   async function refresh() {
     setError("");
@@ -116,8 +137,8 @@ export default function App() {
     const d = await GetDashboard();
     setDashboard(d);
     if (d.initialized) {
-      const items = await ListWorkItems();
-      setWorkItems(items);
+      const items = await refreshWorkItems();
+      await refreshProjectWorkItems();
       if (!selectedWorkItemId && items.length) {
         setSelectedWorkItemId(0);
       }
@@ -161,6 +182,18 @@ export default function App() {
   async function refreshStopwatches() {
     const rows = await ListStopwatches();
     setStopwatches(rows);
+  }
+
+  async function refreshWorkItems() {
+    const items = await ListWorkItems();
+    setWorkItems(items);
+    return items;
+  }
+
+  async function refreshProjectWorkItems() {
+    const items = await ListProjectWorkItems();
+    setProjectWorkItems(items);
+    return items;
   }
 
   async function onInit(event: FormEvent<HTMLFormElement>) {
@@ -240,6 +273,53 @@ export default function App() {
     } catch (e) {
       setStopwatches(previousStopwatches);
       handleError(e);
+    }
+  }
+
+  async function onCreateProject(name: string) {
+    const project = await CreateProject(name);
+    await refreshWorkItems();
+    await refreshProjectWorkItems();
+    setSelectedProjectPageProjectId(project.id);
+  }
+
+  async function onUpdateProject(projectId: number, name: string) {
+    const project = await UpdateProject(projectId, name);
+    await refreshWorkItems();
+    await refreshProjectWorkItems();
+    await refreshStopwatches();
+    setSelectedProjectPageProjectId(project.id);
+  }
+
+  async function onCreateTask(projectId: number, name: string) {
+    await CreateTask(projectId, name);
+    await refreshWorkItems();
+    await refreshProjectWorkItems();
+  }
+
+  async function onDeleteProject(projectId: number) {
+    setError("");
+    await DeleteProject(projectId);
+    if (selectedWorkItemId !== 0) {
+      const selectedItem = projectWorkItems.find((item) => item.id === selectedWorkItemId);
+      if (selectedItem?.id === projectId || selectedItem?.parentId === projectId) {
+        setSelectedWorkItemId(0);
+      }
+    }
+    const items = await refreshProjectWorkItems();
+    await refreshWorkItems();
+    await refreshTimeDay(selectedDate);
+    await refreshStopwatches();
+    const nextProject = items.find((item) => item.parentId == null && item.name.toLowerCase() !== "default");
+    setSelectedProjectPageProjectId(nextProject?.id ?? 0);
+  }
+
+  async function onSetTaskActive(taskId: number, active: boolean) {
+    await SetTaskActive(taskId, active);
+    await refreshWorkItems();
+    await refreshProjectWorkItems();
+    if (!active && selectedWorkItemId === taskId) {
+      setSelectedWorkItemId(0);
     }
   }
 
@@ -471,9 +551,9 @@ export default function App() {
           ↻
         </div>
         <nav className="primary-nav" aria-label="Primary">
-          <a className="selected" href="#dashboard">{t.nav.dashboard}</a>
-          <a href="#reports">{t.nav.reports}</a>
-          <a href="#projects">{t.nav.projects}</a>
+          <a className={activePage === "dashboard" ? "selected" : ""} href="#dashboard">{t.nav.dashboard}</a>
+          <a className={activePage === "reports" ? "selected" : ""} href="#reports">{t.nav.reports}</a>
+          <a className={activePage === "projects" ? "selected" : ""} href="#projects">{t.nav.projects}</a>
         </nav>
         <div className="user-meta">
           <div className="language-switch" aria-label="Language">
@@ -488,47 +568,63 @@ export default function App() {
       </header>
 
       <div className="content">
-        <section className="dashboard-page" id="dashboard">
-          <div className="dashboard-grid">
-            <section className="main-panel">
-              <DashboardCalendar
+        {activePage === "dashboard" ? (
+          <section className="dashboard-page" id="dashboard">
+            <div className="dashboard-grid">
+              <section className="main-panel">
+                <DashboardCalendar
+                  language={language}
+                  selectedDate={selectedDate}
+                  onAddEntry={onAddEntry}
+                  onSelectDate={(date) => setSelectedDate(atLocalNoon(date))}
+                />
+
+                <DashboardSummary
+                  projectTime={formatHoursMinutes(timeDay?.projectSeconds ?? 0)}
+                  workTime={formatHoursMinutes(timeDay?.workSeconds ?? 0)}
+                />
+                <TimeEntriesEmptyState
+                  entries={timeDay?.entries ?? []}
+                  expandedNoteIds={expandedNoteIds}
+                  workItems={workItems}
+                  onDeleteEntry={onDeleteEntry}
+                  onEditEntry={onEditEntry}
+                  onToggleNote={onToggleEntryNote}
+                />
+              </section>
+
+              <StopwatchSidebar
+                selectedWorkItemId={selectedWorkItemId}
+                stopwatches={stopwatches}
                 language={language}
-                selectedDate={selectedDate}
-                onAddEntry={onAddEntry}
-                onSelectDate={(date) => setSelectedDate(atLocalNoon(date))}
-              />
-
-              <DashboardSummary
-                projectTime={formatHoursMinutes(timeDay?.projectSeconds ?? 0)}
-                workTime={formatHoursMinutes(timeDay?.workSeconds ?? 0)}
-              />
-              <TimeEntriesEmptyState
-                entries={timeDay?.entries ?? []}
-                expandedNoteIds={expandedNoteIds}
+                nowTimestamp={nowTimestamp}
                 workItems={workItems}
-                onDeleteEntry={onDeleteEntry}
-                onEditEntry={onEditEntry}
-                onToggleNote={onToggleEntryNote}
+                onBookStopwatch={onBookStopwatch}
+                onSelectWorkItem={setSelectedWorkItemId}
+                onDiscardStopwatch={onDiscardStopwatch}
+                onStart={onStart}
+                onStop={onStop}
+                t={t.stopwatch}
               />
-            </section>
+            </div>
 
-            <StopwatchSidebar
-              selectedWorkItemId={selectedWorkItemId}
-              stopwatches={stopwatches}
-              language={language}
-              nowTimestamp={nowTimestamp}
-              workItems={workItems}
-              onBookStopwatch={onBookStopwatch}
-              onSelectWorkItem={setSelectedWorkItemId}
-              onDiscardStopwatch={onDiscardStopwatch}
-              onStart={onStart}
-              onStop={onStop}
-              t={t.stopwatch}
-            />
-          </div>
-
-          {error ? <pre className="error-box">{error}</pre> : null}
-        </section>
+            {error ? <pre className="error-box">{error}</pre> : null}
+          </section>
+        ) : null}
+        {activePage === "projects" ? (
+          <ProjectsPage
+            selectedProjectId={selectedProjectPageProjectId}
+            t={t.projectsPage}
+            workItems={projectWorkItems}
+            onCreateProject={onCreateProject}
+            onCreateTask={onCreateTask}
+            onDeleteProject={onDeleteProject}
+            onSelectProject={setSelectedProjectPageProjectId}
+            onSetTaskActive={onSetTaskActive}
+            onUpdateProject={onUpdateProject}
+          />
+        ) : null}
+        {activePage === "reports" ? <PlaceholderPage page="reports" text={t.placeholders.reports} /> : null}
       </div>
       {isTimeEntryModalOpen ? (
         <TimeEntryModal
@@ -547,6 +643,26 @@ export default function App() {
         />
       ) : null}
     </main>
+  );
+}
+
+function pageFromHash(hash: string): AppPage {
+  if (hash === "#reports") {
+    return "reports";
+  }
+  if (hash === "#projects") {
+    return "projects";
+  }
+  return "dashboard";
+}
+
+function PlaceholderPage({ page, text }: { page: "reports"; text: { eyebrow: string; title: string; body: string } }) {
+  return (
+    <section className="placeholder-page" id={page} aria-labelledby={`${page}-title`}>
+      <p className="eyebrow">{text.eyebrow}</p>
+      <h1 id={`${page}-title`}>{text.title}</h1>
+      <p>{text.body}</p>
+    </section>
   );
 }
 

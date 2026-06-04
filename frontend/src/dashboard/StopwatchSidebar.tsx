@@ -1,6 +1,7 @@
 import { formatDisplayDate, type DateLanguage } from "./dateFormat";
+import { displayWorkItem } from "./workItemUtils";
 
-type WorkItem = { id: number; name: string; depth: number };
+type WorkItem = { id: number; name: string; parentId?: number | null; depth: number };
 
 type Stopwatch = {
   durationSeconds: number;
@@ -63,8 +64,7 @@ export function StopwatchSidebar({
           <option value={0}></option>
           {availableWorkItems.map((workItem) => (
             <option key={workItem.id} value={workItem.id}>
-              {"- ".repeat(Math.max(0, workItem.depth))}
-              {workItem.name}
+              {formatWorkItemOption(workItem, workItems)}
             </option>
           ))}
         </select>
@@ -75,48 +75,61 @@ export function StopwatchSidebar({
         </div>
       </div>
 
-      {stopwatches.map((stopwatch) => (
-        <div
-          className={`timer-card ${stopwatch.running ? "active" : "book"} ${stopwatch.conflicting ? "conflict" : ""}`}
-          key={stopwatch.id}
-          style={{ borderLeftColor: stopwatch.conflicting ? "#d77" : "#5bb75b" }}
-        >
-          <div className="timer-card-dismiss-row">
-            <button className="discard-button" type="button" onClick={() => onDiscardStopwatch(stopwatch.id)} aria-label={t.discardRunning} title={t.discardRunning}>
-              ×
-            </button>
-          </div>
-          <div className="timer-card-main">
-            <div>
-              <strong>{stopwatch.workItemName}</strong>
-              {!stopwatch.running ? <span>{formatDisplayDate(stopwatch.startDate, language)}</span> : null}
+      {stopwatches.map((stopwatch) => {
+        const display = displayWorkItem(stopwatch.workItemId ?? 0, workItems);
+        const projectName = display.projectName === "Default" && stopwatch.workItemName ? stopwatch.workItemName : display.projectName;
+        return (
+          <div
+            className={`timer-card ${stopwatch.running ? "active" : "book"} ${stopwatch.conflicting ? "conflict" : ""}`}
+            key={stopwatch.id}
+            style={{ borderLeftColor: stopwatch.conflicting ? "#d77" : "#5bb75b" }}
+          >
+            <div className="timer-card-dismiss-row">
+              <button className="discard-button" type="button" onClick={() => onDiscardStopwatch(stopwatch.id)} aria-label={t.discardRunning} title={t.discardRunning}>
+                ×
+              </button>
+            </div>
+            <div className="timer-card-main">
+              <div>
+                <strong>{projectName}</strong>
+                {display.taskName ? <span>{display.taskName}</span> : null}
+                {!stopwatch.running ? <span>{formatDisplayDate(stopwatch.startDate, language)}</span> : null}
+              </div>
+            </div>
+            <div className="timer-card-times">
+              <span>{stopwatch.startTime}</span>
+              {!stopwatch.running ? <span>{stopwatch.endTime}</span> : null}
+              <span>{formatStopwatchDuration(stopwatch, nowTimestamp)}</span>
+            </div>
+            <div className="timer-card-actions">
+              {stopwatch.conflicting ? (
+                <button className="book-button" type="button" onClick={() => onBookStopwatch(stopwatch)}>
+                  {t.book}
+                </button>
+              ) : null}
+              {stopwatch.running ? (
+                <button className="stop-button" type="button" onClick={onStop} aria-label={t.stopStopwatch} title={t.stopStopwatch}>
+                  {t.stopStopwatch}
+                </button>
+              ) : (
+                <button className="play-button" type="button" onClick={() => onStart(stopwatch.workItemId ?? 0)} aria-label={t.start}>
+                  {t.start}
+                </button>
+              )}
             </div>
           </div>
-          <div className="timer-card-times">
-            <span>{stopwatch.startTime}</span>
-            {!stopwatch.running ? <span>{stopwatch.endTime}</span> : null}
-            <span>{formatStopwatchDuration(stopwatch, nowTimestamp)}</span>
-          </div>
-          <div className="timer-card-actions">
-            {stopwatch.conflicting ? (
-              <button className="book-button" type="button" onClick={() => onBookStopwatch(stopwatch)}>
-                {t.book}
-              </button>
-            ) : null}
-            {stopwatch.running ? (
-              <button className="stop-button" type="button" onClick={onStop} aria-label={t.stopStopwatch} title={t.stopStopwatch}>
-                {t.stopStopwatch}
-              </button>
-            ) : (
-              <button className="play-button" type="button" onClick={() => onStart(stopwatch.workItemId ?? 0)} aria-label={t.start}>
-                {t.start}
-              </button>
-            )}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </aside>
   );
+}
+
+function formatWorkItemOption(workItem: WorkItem, workItems: WorkItem[]): string {
+  const display = displayWorkItem(workItem.id, workItems);
+  if (display.taskName) {
+    return `${display.projectName} - ${display.taskName}`;
+  }
+  return display.projectName;
 }
 
 function formatStopwatchDuration(stopwatch: Stopwatch, nowTimestamp: number): string {
