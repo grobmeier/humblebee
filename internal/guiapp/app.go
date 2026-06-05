@@ -12,7 +12,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/grobmeier/humblebee/internal/db"
 	"github.com/grobmeier/humblebee/internal/model"
-	"github.com/grobmeier/humblebee/internal/paths"
 	"github.com/grobmeier/humblebee/internal/repo"
 	"github.com/grobmeier/humblebee/internal/service"
 	"github.com/grobmeier/humblebee/internal/timeutil"
@@ -1371,7 +1370,7 @@ func stopwatchOverlapError(running *model.TimeEntry, end time.Time, loc *time.Lo
 }
 
 func (a *App) openDB() (*sql.DB, string, error) {
-	dbPath, err := paths.DBPath()
+	dbPath, err := a.databasePath()
 	if err != nil {
 		return nil, "", err
 	}

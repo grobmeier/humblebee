@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import "./app.css";
 import {
+  CreateDatabase,
   CreateTimeEntry,
   CreateProject,
   CreateTask,
@@ -8,16 +9,24 @@ import {
   DeleteTimeEntry,
   DiscardStopwatch,
   GetDashboard,
+  GetDatabaseInfo,
   GetTimeDay,
+  ImportTimeAndBill,
   Init,
   ListProjectWorkItems,
   ListStopwatches,
   ListWorkItems,
+  PreviewTimeAndBillImport,
+  SelectDatabaseFile,
+  SelectImportFile,
+  SelectNewDatabaseFile,
   SetTaskActive,
   Start,
   Stop,
+  SwitchDatabase,
   UpdateProject,
-  UpdateTimeEntry
+  UpdateTimeEntry,
+  UseDefaultDatabase
 } from "../wailsjs/go/guiapp/App";
 import { Quit } from "../wailsjs/runtime/runtime";
 import type { guiapp } from "../wailsjs/go/models";
@@ -31,6 +40,9 @@ import { TimeEntryModal } from "./dashboard/TimeEntryModal";
 import type { TimeEntryFormState } from "./dashboard/timeEntryTypes";
 import { type Language, translations } from "./dashboard/translations";
 import { HumbleBeeLogo } from "./components/HumbleBeeLogo";
+import { DatabaseSwitchIcon, ImportIcon } from "./components/AppIcons";
+import { DatabaseSwitchModal } from "./database/DatabaseSwitchModal";
+import { TimeAndBillImportModal } from "./importing/TimeAndBillImportModal";
 import { ProjectsPage } from "./projects/ProjectsPage";
 import { ReportsPage } from "./reports/ReportsPage";
 import { reportSlugFromHash } from "./reports/reportUtils";
@@ -62,6 +74,8 @@ type StopwatchOverlapError = {
 };
 
 type AppPage = "dashboard" | "reports" | "projects";
+
+const localProfileEmail = "local@humblebee.local";
 
 function formatHoursMinutes(total: number): string {
   const seconds = Math.max(0, Math.floor(total));
@@ -102,7 +116,6 @@ export default function App() {
   const [dashboard, setDashboard] = useState<Dashboard | null>(null);
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
   const [projectWorkItems, setProjectWorkItems] = useState<WorkItem[]>([]);
-  const [email, setEmail] = useState("");
   const [selectedWorkItemId, setSelectedWorkItemId] = useState<number>(0);
   const [error, setError] = useState<string>("");
   const [databaseBusyError, setDatabaseBusyError] = useState<DatabaseBusyError | null>(null);
@@ -121,6 +134,17 @@ export default function App() {
   const [activePage, setActivePage] = useState<AppPage>(() => pageFromHash(window.location.hash));
   const [activeReport, setActiveReport] = useState<ReportSlug>(() => reportSlugFromHash(window.location.hash));
   const [selectedProjectPageProjectId, setSelectedProjectPageProjectId] = useState<number>(0);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importFilePath, setImportFilePath] = useState("");
+  const [importPreview, setImportPreview] = useState<guiapp.ImportPreview | null>(null);
+  const [importResult, setImportResult] = useState<guiapp.ImportResult | null>(null);
+  const [importModalError, setImportModalError] = useState<string | null>(null);
+  const [isPreviewingImport, setIsPreviewingImport] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [isDatabaseModalOpen, setIsDatabaseModalOpen] = useState(false);
+  const [databaseInfo, setDatabaseInfo] = useState<guiapp.DatabaseInfo | null>(null);
+  const [databaseModalError, setDatabaseModalError] = useState<string | null>(null);
+  const [isSwitchingDatabase, setIsSwitchingDatabase] = useState(false);
   const t = translations[language];
 
   useEffect(() => {
@@ -202,15 +226,28 @@ export default function App() {
     return items;
   }
 
+  function clearWorkspaceState() {
+    setWorkItems([]);
+    setProjectWorkItems([]);
+    setStopwatches([]);
+    setTimeDay(null);
+    setExpandedNoteIds([]);
+    setSelectedWorkItemId(0);
+    setSelectedProjectPageProjectId(0);
+  }
+
+  async function refreshAfterDatabaseChange() {
+    clearWorkspaceState();
+    setIsTimeEntryModalOpen(false);
+    setConfirmationStopwatchId(null);
+    await refresh();
+  }
+
   async function onInit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
-    if (!email.trim()) {
-      setError("Enter the email address you want to use for this local workspace.");
-      return;
-    }
     try {
-      await Init(email.trim());
+      await Init(localProfileEmail);
       await refresh();
     } catch (e) {
       handleError(e);
@@ -326,6 +363,126 @@ export default function App() {
     await refreshProjectWorkItems();
     if (!active && selectedWorkItemId === taskId) {
       setSelectedWorkItemId(0);
+    }
+  }
+
+  function openImportModal() {
+    setImportFilePath("");
+    setImportPreview(null);
+    setImportResult(null);
+    setImportModalError(null);
+    setIsImportModalOpen(true);
+  }
+
+  async function chooseImportFile() {
+    setImportModalError(null);
+    try {
+      const path = await SelectImportFile();
+      if (path) {
+        setImportFilePath(path);
+        setImportPreview(null);
+        setImportResult(null);
+      }
+    } catch (e) {
+      setImportModalError(String(e));
+    }
+  }
+
+  async function previewImport() {
+    if (!importFilePath) {
+      return;
+    }
+    setImportModalError(null);
+    setIsPreviewingImport(true);
+    try {
+      setImportPreview(await PreviewTimeAndBillImport(importFilePath));
+      setImportResult(null);
+    } catch (e) {
+      setImportModalError(String(e));
+    } finally {
+      setIsPreviewingImport(false);
+    }
+  }
+
+  async function importTimeAndBill() {
+    if (!importFilePath || !importPreview) {
+      return;
+    }
+    setImportModalError(null);
+    setIsImporting(true);
+    try {
+      setImportResult(await ImportTimeAndBill(importFilePath));
+      await refresh();
+      await refreshTimeDay(selectedDate);
+      await refreshStopwatches();
+    } catch (e) {
+      setImportModalError(String(e));
+    } finally {
+      setIsImporting(false);
+    }
+  }
+
+  async function openDatabaseModal() {
+    setDatabaseModalError(null);
+    try {
+      const info = await GetDatabaseInfo();
+      setDatabaseInfo(info);
+      setIsDatabaseModalOpen(true);
+    } catch (e) {
+      handleError(e);
+    }
+  }
+
+  async function openExistingDatabase() {
+    setDatabaseModalError(null);
+    setIsSwitchingDatabase(true);
+    try {
+      const path = await SelectDatabaseFile();
+      if (!path) {
+        return;
+      }
+      const info = await SwitchDatabase(path);
+      setDatabaseInfo(info);
+      setIsDatabaseModalOpen(false);
+      await refreshAfterDatabaseChange();
+    } catch (e) {
+      setDatabaseModalError(String(e));
+    } finally {
+      setIsSwitchingDatabase(false);
+    }
+  }
+
+  async function createNewDatabase() {
+    setDatabaseModalError(null);
+    setIsSwitchingDatabase(true);
+    try {
+      const path = await SelectNewDatabaseFile();
+      if (!path) {
+        return;
+      }
+      const info = await CreateDatabase(path);
+      setDatabaseInfo(info);
+      setIsDatabaseModalOpen(false);
+      await refreshAfterDatabaseChange();
+    } catch (e) {
+      setDatabaseModalError(String(e));
+    } finally {
+      setIsSwitchingDatabase(false);
+    }
+  }
+
+  async function useDefaultDatabase() {
+    setDatabaseModalError(null);
+    setIsSwitchingDatabase(true);
+    try {
+      const info = await UseDefaultDatabase();
+      setDatabaseInfo(info);
+      setIsDatabaseModalOpen(false);
+      await refreshAfterDatabaseChange();
+    } catch (e) {
+      setDatabaseModalError(String(e));
+    } finally {
+      setIsSwitchingDatabase(false);
     }
   }
 
@@ -515,36 +672,19 @@ export default function App() {
       <div className="onboarding-screen">
         <div className="onboarding-brand">Humblebee</div>
         <div className="onboarding-panel">
-          <div className="onboarding-progress" aria-label="Onboarding progress">
-            <span className="is-active"></span>
-            <span></span>
-            <span></span>
-          </div>
           <p className="eyebrow">Local-first time tracking</p>
           <form className="onboarding-form" onSubmit={onInit}>
             <h1>Set up your local workspace.</h1>
-            <p>
-              Humblebee keeps your time entries on this computer. Use the email address that should identify
-              this local profile.
-            </p>
-            <label htmlFor="setup-email">Email</label>
-            <input
-              id="setup-email"
-              autoFocus
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              type="email"
-            />
+            <p>Humblebee keeps your time entries local.</p>
+            <div className="local-note local-note--setup">
+              <span>You can find your database here:</span>
+              <code>{dashboard.dbPath}</code>
+            </div>
             {error ? <p className="form-error">{error}</p> : null}
             <button className="primary-button" type="submit">
               Create workspace
             </button>
           </form>
-          <div className="local-note">
-            <span>Database</span>
-            <code>{dashboard.dbPath}</code>
-          </div>
         </div>
       </div>
     );
@@ -562,6 +702,12 @@ export default function App() {
           <a className={activePage === "projects" ? "selected" : ""} href="#projects">{t.nav.projects}</a>
         </nav>
         <div className="user-meta">
+          <button className="icon-button" type="button" onClick={openImportModal} aria-label={t.importPage.importButton} title={t.importPage.importButton}>
+            <ImportIcon />
+          </button>
+          <button className="icon-button" type="button" onClick={() => void openDatabaseModal()} aria-label={t.databasePage.switchButton} title={t.databasePage.switchButton}>
+            <DatabaseSwitchIcon />
+          </button>
           <div className="language-switch" aria-label="Language">
             <button className={language === "de" ? "active" : ""} type="button" onClick={() => setLanguage("de")}>
               DE
@@ -646,6 +792,34 @@ export default function App() {
             setIsTimeEntryModalOpen(false);
           }}
           onSubmit={onSubmitTimeEntry}
+        />
+      ) : null}
+      {isImportModalOpen ? (
+        <TimeAndBillImportModal
+          error={importModalError}
+          filePath={importFilePath}
+          isImporting={isImporting}
+          isPreviewing={isPreviewingImport}
+          preview={importPreview}
+          result={importResult}
+          t={t.importPage}
+          onChooseFile={chooseImportFile}
+          onClose={() => setIsImportModalOpen(false)}
+          onImport={() => void importTimeAndBill()}
+          onPreview={() => void previewImport()}
+        />
+      ) : null}
+      {isDatabaseModalOpen ? (
+        <DatabaseSwitchModal
+          currentDatabasePath={dashboard.dbPath}
+          databaseInfo={databaseInfo}
+          error={databaseModalError}
+          isSaving={isSwitchingDatabase}
+          t={t.databasePage}
+          onCreateNew={() => void createNewDatabase()}
+          onOpenExisting={() => void openExistingDatabase()}
+          onClose={() => setIsDatabaseModalOpen(false)}
+          onUseDefault={() => void useDefaultDatabase()}
         />
       ) : null}
     </main>

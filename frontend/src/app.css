@@ -74,23 +74,6 @@ code {
   box-shadow: 0 24px 70px rgba(47, 52, 55, 0.16);
 }
 
-.onboarding-progress {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 32px;
-}
-
-.onboarding-progress span {
-  display: block;
-  width: 56px;
-  height: 8px;
-  background: rgba(47, 52, 55, 0.18);
-}
-
-.onboarding-progress .is-active {
-  background: #2f3437;
-}
-
 .eyebrow {
   margin: 0 0 8px;
   color: #5f6f82;
@@ -230,6 +213,10 @@ code {
   margin-top: 28px;
   padding-top: 18px;
   border-top: 1px solid rgba(47, 52, 55, 0.12);
+}
+
+.local-note--setup {
+  margin: 18px 0 0;
 }
 
 .local-note span {
@@ -1152,6 +1139,133 @@ code {
   border-radius: 4px;
   background: #f8e6e6;
   color: #8b1f1f;
+}
+
+.alert-warning {
+  padding: 8px 10px;
+  border: 1px solid #ead08b;
+  border-radius: 4px;
+  background: #fff7dc;
+  color: #745100;
+}
+
+.alert-success {
+  padding: 8px 10px;
+  border: 1px solid #a8d6ae;
+  border-radius: 4px;
+  background: #e9f8eb;
+  color: #25602e;
+}
+
+.modal-path-value {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  padding: 7px 8px;
+  overflow-wrap: anywhere;
+  border: 1px solid #d5dbe3;
+  border-radius: 4px;
+  background: #f8fafc;
+  color: #334155;
+  font-size: 12px;
+}
+
+.modal-meta-grid {
+  display: grid;
+  grid-template-columns: minmax(120px, max-content) minmax(0, 1fr);
+  gap: 8px 12px;
+  align-items: start;
+  font-size: 13px;
+}
+
+.modal-meta-grid span {
+  color: #64748b;
+  font-weight: 700;
+}
+
+.modal-meta-grid code {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.summary-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.summary-row {
+  display: grid;
+  grid-template-columns: minmax(100px, 1fr) repeat(3, max-content);
+  gap: 6px 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid #d9e1ea;
+  border-radius: 4px;
+  background: #f8fafc;
+  font-size: 13px;
+}
+
+.summary-row > span {
+  font-weight: 800;
+}
+
+.summary-row small {
+  color: #64748b;
+}
+
+.modal-inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.database-choice-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.database-choice-button {
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+  width: 100%;
+  min-height: 58px;
+  text-align: left;
+}
+
+.database-choice-button span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.import-conflicts ul {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+.import-complete {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #a8d6ae;
+  border-radius: 4px;
+  background: #e9f8eb;
+  color: #25602e;
+}
+
+.import-complete span {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 999px;
+  background: #2f9e44;
+  color: #fff;
+  font-weight: 900;
 }
 
 .recovery-screen {
