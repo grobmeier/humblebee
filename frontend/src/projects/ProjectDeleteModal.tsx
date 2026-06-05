@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { DashboardModal } from "../dashboard/DashboardModal";
+import { Modal } from "../components/Modal";
 import type { ProjectsPageText, WorkItem } from "./projectTypes";
 
 type ProjectDeleteModalProps = {
@@ -13,7 +13,7 @@ type ProjectDeleteModalProps = {
 
 export function ProjectDeleteModal({ error, isSaving, project, t, onClose, onSubmit }: ProjectDeleteModalProps) {
   return (
-    <DashboardModal
+    <Modal
       title={t.deleteProjectTitle}
       onClose={onClose}
       onSubmit={onSubmit}
@@ -30,6 +30,6 @@ export function ProjectDeleteModal({ error, isSaving, project, t, onClose, onSub
     >
       {error ? <div className="errors alert alert-error">{error}</div> : null}
       <p className="project-delete-warning">{t.deleteProjectWarning.replace("{name}", project.name)}</p>
-    </DashboardModal>
+    </Modal>
   );
 }

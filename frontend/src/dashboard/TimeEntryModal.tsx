@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type FormEventHandler } from "react";
-import { DashboardFormRow, DashboardModal } from "./DashboardModal";
+import { FormRow, Modal } from "../components/Modal";
 import { flatpickrDateFormat, formatDisplayDate, parseDisplayDate, type DateLanguage } from "./dateFormat";
 import type { TimeEntryFormState } from "./timeEntryTypes";
 import { displayWorkItem } from "./workItemUtils";
@@ -34,7 +34,7 @@ export function TimeEntryModal({ error, form, isSaving, language, onChange, onCl
   const selectedWorkItem = displayWorkItem(form.projectId, workItems);
 
   return (
-    <DashboardModal
+    <Modal
       title="Zeiteintrag erfassen"
       onClose={onClose}
       onSubmit={onSubmit}
@@ -45,7 +45,7 @@ export function TimeEntryModal({ error, form, isSaving, language, onChange, onCl
       }
     >
       {error ? <div className="errors alert alert-error">{error}</div> : null}
-      <DashboardFormRow label="Start" controlsClassName="tab-form-controls tab-form-controls--inline">
+      <FormRow label="Start" controlsClassName="tab-form-controls tab-form-controls--inline">
         <DashboardDateInput
           className="tab-form-control tab-form-control--compact tab-form-control--small"
           language={language}
@@ -57,10 +57,10 @@ export function TimeEntryModal({ error, form, isSaving, language, onChange, onCl
           value={form.startTime}
           onChange={(value) => onChange({ ...form, startTime: value })}
         />
-      </DashboardFormRow>
+      </FormRow>
 
       {!form.untilMidnight ? (
-        <DashboardFormRow label="Ende" controlsClassName="tab-form-controls tab-form-controls--inline">
+        <FormRow label="Ende" controlsClassName="tab-form-controls tab-form-controls--inline">
           <DashboardDateInput
             className="tab-form-control tab-form-control--compact tab-form-control--small"
             language={language}
@@ -72,10 +72,10 @@ export function TimeEntryModal({ error, form, isSaving, language, onChange, onCl
             value={form.endTime}
             onChange={(value) => onChange({ ...form, endTime: value })}
           />
-        </DashboardFormRow>
+        </FormRow>
       ) : null}
 
-      <DashboardFormRow label="" labelHidden>
+      <FormRow label="" labelHidden>
         <label className="tab-form-checkbox tab-form-checkbox--row">
           <input
             type="checkbox"
@@ -91,9 +91,9 @@ export function TimeEntryModal({ error, form, isSaving, language, onChange, onCl
           />
           Bis Mitternacht?
         </label>
-      </DashboardFormRow>
+      </FormRow>
 
-      <DashboardFormRow label="Projekt">
+      <FormRow label="Projekt">
         <select
           className="tab-form-control"
           value={form.projectId}
@@ -107,23 +107,23 @@ export function TimeEntryModal({ error, form, isSaving, language, onChange, onCl
             </option>
           ))}
         </select>
-      </DashboardFormRow>
+      </FormRow>
 
-      <DashboardFormRow label="Taetigkeit">
+      <FormRow label="Taetigkeit">
         <select className="tab-form-control" value={form.taskId} onChange={(event) => onChange({ ...form, taskId: Number(event.target.value) })}>
           <option value={form.projectId}>{selectedWorkItem.taskName || selectedWorkItem.projectName}</option>
         </select>
-      </DashboardFormRow>
+      </FormRow>
 
-      <DashboardFormRow label="Notiz">
+      <FormRow label="Notiz">
         <textarea
           className="tab-form-control"
           rows={4}
           value={form.description}
           onChange={(event) => onChange({ ...form, description: event.target.value })}
         />
-      </DashboardFormRow>
-    </DashboardModal>
+      </FormRow>
+    </Modal>
   );
 }
 

@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { DashboardFormRow, DashboardModal } from "../dashboard/DashboardModal";
+import { FormRow, Modal } from "../components/Modal";
 import type { ProjectFormModalState, ProjectsPageText } from "./projectTypes";
 
 type ProjectNameModalProps = {
@@ -15,7 +15,7 @@ type ProjectNameModalProps = {
 
 export function ProjectNameModal({ error, isSaving, modal, name, t, onChange, onClose, onSubmit }: ProjectNameModalProps) {
   return (
-    <DashboardModal
+    <Modal
       title={modalTitle(modal, t)}
       onClose={onClose}
       onSubmit={onSubmit}
@@ -26,10 +26,10 @@ export function ProjectNameModal({ error, isSaving, modal, name, t, onChange, on
       }
     >
       {error ? <div className="errors alert alert-error">{error}</div> : null}
-      <DashboardFormRow label={t.name}>
+      <FormRow label={t.name}>
         <input className="tab-form-control" autoFocus value={name} onChange={(event) => onChange(event.target.value)} />
-      </DashboardFormRow>
-    </DashboardModal>
+      </FormRow>
+    </Modal>
   );
 }
 

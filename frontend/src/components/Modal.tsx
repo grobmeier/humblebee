@@ -1,6 +1,6 @@
 import type { FormEventHandler, ReactNode } from "react";
 
-type DashboardModalProps = {
+type ModalProps = {
   children: ReactNode;
   footer?: ReactNode;
   onClose: () => void;
@@ -8,7 +8,7 @@ type DashboardModalProps = {
   title: string;
 };
 
-export function DashboardModal({ children, footer, onClose, onSubmit, title }: DashboardModalProps) {
+export function Modal({ children, footer, onClose, onSubmit, title }: ModalProps) {
   return (
     <div
       className="tab-modal"
@@ -32,14 +32,14 @@ export function DashboardModal({ children, footer, onClose, onSubmit, title }: D
   );
 }
 
-type DashboardFormRowProps = {
+type FormRowProps = {
   children: ReactNode;
   controlsClassName?: string;
   label: string;
   labelHidden?: boolean;
 };
 
-export function DashboardFormRow({ children, controlsClassName = "tab-form-controls", label, labelHidden = false }: DashboardFormRowProps) {
+export function FormRow({ children, controlsClassName = "tab-form-controls", label, labelHidden = false }: FormRowProps) {
   return (
     <div className="tab-form-row">
       <label className="tab-form-label" aria-hidden={labelHidden || undefined}>
