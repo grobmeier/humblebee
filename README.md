@@ -137,3 +137,7 @@ Run tests:
 ```bash
 go test ./...
 ```
+
+## Security
+
+Please report suspected vulnerabilities privately. See [SECURITY.md](SECURITY.md) for supported versions, reporting instructions, and SBOM maintenance notes.
