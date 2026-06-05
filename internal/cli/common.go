@@ -17,18 +17,18 @@ func openDB() (*sql.DB, string, error) {
 	}
 	database, err := db.Open(path)
 	if err != nil {
-		return nil, "", err
+		return nil, "", db.WrapBusyError(path, err)
 	}
 	initialized, err := db.IsInitialized(database)
 	if err != nil {
 		_ = database.Close()
-		return nil, "", err
+		return nil, "", db.WrapBusyError(path, err)
 	}
 	if initialized {
 		// Apply idempotent migrations on every run for already-initialized databases.
 		if err := db.Migrate(database); err != nil {
 			_ = database.Close()
-			return nil, "", err
+			return nil, "", db.WrapBusyError(path, err)
 		}
 	}
 	return database, path, nil

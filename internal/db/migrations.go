@@ -3,9 +3,10 @@ package db
 import (
 	"database/sql"
 	"errors"
+	"strconv"
 )
 
-const schemaVersion = 3
+const schemaVersion = 6
 
 func IsInitialized(db *sql.DB) (bool, error) {
 	var v string
@@ -28,6 +29,11 @@ func IsInitialized(db *sql.DB) (bool, error) {
 }
 
 func Migrate(db *sql.DB) error {
+	current, err := currentSchemaVersion(db)
+	if err == nil && current >= schemaVersion {
+		return nil
+	}
+
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -82,6 +88,7 @@ func Migrate(db *sql.DB) error {
 			start_time INTEGER NOT NULL,
 			end_time INTEGER,
 			duration INTEGER,
+			entry_source TEXT NOT NULL DEFAULT 'manual',
 			tz_name TEXT NOT NULL DEFAULT '',
 			tz_offset_minutes INTEGER NOT NULL DEFAULT 0,
 			created_at INTEGER NOT NULL,
@@ -93,9 +100,7 @@ func Migrate(db *sql.DB) error {
 		`CREATE INDEX IF NOT EXISTS idx_time_entries_workitem ON time_entries(workitem_id);`,
 		`CREATE INDEX IF NOT EXISTS idx_time_entries_start ON time_entries(start_time);`,
 		`CREATE INDEX IF NOT EXISTS idx_time_entries_running ON time_entries(end_time) WHERE end_time IS NULL;`,
-		`CREATE UNIQUE INDEX IF NOT EXISTS idx_time_entries_one_running_per_person
-			ON time_entries(person_id)
-			WHERE end_time IS NULL;`,
+		`DROP INDEX IF EXISTS idx_time_entries_one_running_per_person;`,
 
 		`CREATE TABLE IF NOT EXISTS config (
 			key TEXT PRIMARY KEY,
@@ -124,6 +129,13 @@ func Migrate(db *sql.DB) error {
 		);`,
 		`CREATE INDEX IF NOT EXISTS idx_external_mappings_local
 			ON external_mappings(local_table, local_id);`,
+		`CREATE TABLE IF NOT EXISTS closed_stopwatch_workitems (
+			person_id INTEGER NOT NULL,
+			workitem_id INTEGER NOT NULL,
+			created_at INTEGER NOT NULL,
+			PRIMARY KEY (person_id, workitem_id),
+			FOREIGN KEY (person_id) REFERENCES persons(id) ON DELETE CASCADE
+		);`,
 		`INSERT OR IGNORE INTO config (key, value, created_at) VALUES ('schema_version', '3', strftime('%s','now'));`,
 		`INSERT OR IGNORE INTO config (key, value, created_at) VALUES ('initialized_at', strftime('%s','now'), strftime('%s','now'));`,
 	}
@@ -138,6 +150,9 @@ func Migrate(db *sql.DB) error {
 	if err := ensureTimeEntryTZColumns(tx); err != nil {
 		return err
 	}
+	if err := ensureTimeEntrySourceColumn(tx); err != nil {
+		return err
+	}
 
 	// Basic schema_version check; future migrations can build on this.
 	_, err = tx.Exec(`UPDATE config SET value = ? WHERE key='schema_version'`, schemaVersion)
@@ -148,17 +163,62 @@ func Migrate(db *sql.DB) error {
 	return tx.Commit()
 }
 
-func ensureTimeEntryTZColumns(tx *sql.Tx) error {
-	type col struct {
-		name string
+func currentSchemaVersion(db *sql.DB) (int, error) {
+	var value string
+	if err := db.QueryRow(`SELECT value FROM config WHERE key='schema_version'`).Scan(&value); err != nil {
+		return 0, err
 	}
-	rows, err := tx.Query(`PRAGMA table_info(time_entries);`)
+	return strconv.Atoi(value)
+}
+
+func ensureTimeEntrySourceColumn(tx *sql.Tx) error {
+	exists, err := timeEntryColumnExists(tx, "entry_source")
 	if err != nil {
 		return err
 	}
+	if exists {
+		return backfillLegacyRunningStopwatches(tx)
+	}
+	if _, err := tx.Exec(`ALTER TABLE time_entries ADD COLUMN entry_source TEXT NOT NULL DEFAULT 'manual';`); err != nil {
+		return err
+	}
+	return backfillLegacyRunningStopwatches(tx)
+}
+
+func backfillLegacyRunningStopwatches(tx *sql.Tx) error {
+	_, err := tx.Exec(`UPDATE time_entries SET entry_source = 'stopwatch' WHERE end_time IS NULL AND entry_source = 'manual';`)
+	return err
+}
+
+func ensureTimeEntryTZColumns(tx *sql.Tx) error {
+	tzNameExists, err := timeEntryColumnExists(tx, "tz_name")
+	if err != nil {
+		return err
+	}
+	tzOffsetExists, err := timeEntryColumnExists(tx, "tz_offset_minutes")
+	if err != nil {
+		return err
+	}
+	if !tzNameExists {
+		if _, err := tx.Exec(`ALTER TABLE time_entries ADD COLUMN tz_name TEXT NOT NULL DEFAULT '';`); err != nil {
+			return err
+		}
+	}
+	if !tzOffsetExists {
+		if _, err := tx.Exec(`ALTER TABLE time_entries ADD COLUMN tz_offset_minutes INTEGER NOT NULL DEFAULT 0;`); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func timeEntryColumnExists(tx *sql.Tx, column string) (bool, error) {
+	rows, err := tx.Query(`PRAGMA table_info(time_entries);`)
+	if err != nil {
+		return false, err
+	}
 	defer rows.Close()
 
-	existing := map[string]bool{}
 	for rows.Next() {
 		var cid int
 		var name string
@@ -167,23 +227,14 @@ func ensureTimeEntryTZColumns(tx *sql.Tx) error {
 		var dflt sql.NullString
 		var pk int
 		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
-			return err
+			return false, err
 		}
-		existing[name] = true
+		if name == column {
+			return true, nil
+		}
 	}
 	if err := rows.Err(); err != nil {
-		return err
+		return false, err
 	}
-
-	if !existing["tz_name"] {
-		if _, err := tx.Exec(`ALTER TABLE time_entries ADD COLUMN tz_name TEXT NOT NULL DEFAULT '';`); err != nil {
-			return err
-		}
-	}
-	if !existing["tz_offset_minutes"] {
-		if _, err := tx.Exec(`ALTER TABLE time_entries ADD COLUMN tz_offset_minutes INTEGER NOT NULL DEFAULT 0;`); err != nil {
-			return err
-		}
-	}
-	return nil
+	return false, nil
 }

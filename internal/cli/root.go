@@ -1,8 +1,10 @@
 package cli
 
 import (
+	"errors"
 	"os"
 
+	"github.com/grobmeier/humblebee/internal/db"
 	"github.com/grobmeier/humblebee/internal/ui"
 	"github.com/spf13/cobra"
 )
@@ -38,8 +40,16 @@ func Execute() error {
 	rootCmd.AddCommand(importCmd)
 
 	if err := rootCmd.Execute(); err != nil {
-		ui.PrintError(err.Error())
+		ui.PrintError(cliErrorMessage(err))
 		return err
 	}
 	return nil
+}
+
+func cliErrorMessage(err error) string {
+	var busy *db.BusyError
+	if errors.As(err, &busy) {
+		return db.BusyRecoveryMessage(busy.Path)
+	}
+	return err.Error()
 }
