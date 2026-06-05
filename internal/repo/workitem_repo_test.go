@@ -70,3 +70,52 @@ func TestWorkItemUniqueAtRootCaseInsensitive(t *testing.T) {
 	}
 }
 
+func TestDeleteProjectAndTimeEntriesRejectsTask(t *testing.T) {
+	database := openMemory(t)
+	defer database.Close()
+
+	if err := db.Migrate(database); err != nil {
+		t.Fatal(err)
+	}
+
+	personRepo := NewPersonRepo(database)
+	personID, err := personRepo.CreateDefault(model.Person{
+		UUID:      uuid.NewString(),
+		Email:     "user@example.com",
+		Username:  "user",
+		CreatedAt: time.Now().UTC().Unix(),
+		IsActive:  true,
+		IsDefault: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	workRepo := NewWorkItemRepo(database)
+	project, err := workRepo.Create(CreateWorkItemParams{
+		PersonID: personID,
+		UUID:     uuid.NewString(),
+		Name:     "Client",
+		Depth:    0,
+		Created:  time.Now().UTC().Unix(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	task, err := workRepo.Create(CreateWorkItemParams{
+		PersonID: personID,
+		UUID:     uuid.NewString(),
+		Name:     "Research",
+		ParentID: &project.ID,
+		Depth:    1,
+		Created:  time.Now().UTC().Unix(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = workRepo.DeleteProjectAndTimeEntries(personID, task.ID)
+	if err == nil || err.Error() != "work item is not a project" {
+		t.Fatalf("expected work item kind error, got %v", err)
+	}
+}

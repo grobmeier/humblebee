@@ -64,6 +64,10 @@ func TestMigrateAddsTimeEntryTZColumnsToExistingDB(t *testing.T) {
 			created_at INTEGER NOT NULL,
 			updated_at INTEGER
 		);
+		INSERT INTO time_entries (uuid, person_id, start_time, end_time, duration, created_at)
+			VALUES ('running-1', 1, 1000, NULL, NULL, 1000);
+		INSERT INTO time_entries (uuid, person_id, start_time, end_time, duration, created_at)
+			VALUES ('completed-1', 1, 1000, 1600, 600, 1000);
 	`); err != nil {
 		t.Fatal(err)
 	}
@@ -97,6 +101,66 @@ func TestMigrateAddsTimeEntryTZColumnsToExistingDB(t *testing.T) {
 
 	if !cols["tz_name"] || !cols["tz_offset_minutes"] {
 		t.Fatalf("expected tz columns to exist, got %#v", cols)
+	}
+	if !cols["entry_source"] {
+		t.Fatalf("expected entry_source column to exist, got %#v", cols)
+	}
+
+	var runningSource string
+	if err := database.QueryRow(`SELECT entry_source FROM time_entries WHERE uuid = 'running-1'`).Scan(&runningSource); err != nil {
+		t.Fatal(err)
+	}
+	if runningSource != "stopwatch" {
+		t.Fatalf("expected legacy running row to be restored as stopwatch, got %q", runningSource)
+	}
+	var completedSource string
+	if err := database.QueryRow(`SELECT entry_source FROM time_entries WHERE uuid = 'completed-1'`).Scan(&completedSource); err != nil {
+		t.Fatal(err)
+	}
+	if completedSource != "manual" {
+		t.Fatalf("expected completed legacy row to stay manual, got %q", completedSource)
+	}
+}
+
+func TestMigrateBackfillsRunningStopwatchWhenEntrySourceAlreadyExists(t *testing.T) {
+	database := openMemory(t)
+	defer database.Close()
+
+	if _, err := database.Exec(`
+		CREATE TABLE config (key TEXT PRIMARY KEY, value TEXT NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER);
+		INSERT INTO config (key, value, created_at) VALUES ('schema_version', '5', strftime('%s','now'));
+
+		CREATE TABLE time_entries (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			uuid TEXT UNIQUE NOT NULL,
+			person_id INTEGER NOT NULL,
+			workitem_id INTEGER,
+			description TEXT,
+			start_time INTEGER NOT NULL,
+			end_time INTEGER,
+			duration INTEGER,
+			entry_source TEXT NOT NULL DEFAULT 'manual',
+			tz_name TEXT NOT NULL DEFAULT '',
+			tz_offset_minutes INTEGER NOT NULL DEFAULT 0,
+			created_at INTEGER NOT NULL,
+			updated_at INTEGER
+		);
+		INSERT INTO time_entries (uuid, person_id, start_time, end_time, duration, entry_source, created_at)
+			VALUES ('running-1', 1, 1000, NULL, NULL, 'manual', 1000);
+	`); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := Migrate(database); err != nil {
+		t.Fatal(err)
+	}
+
+	var source string
+	if err := database.QueryRow(`SELECT entry_source FROM time_entries WHERE uuid = 'running-1'`).Scan(&source); err != nil {
+		t.Fatal(err)
+	}
+	if source != "stopwatch" {
+		t.Fatalf("expected existing entry_source database to restore running stopwatch, got %q", source)
 	}
 }
 

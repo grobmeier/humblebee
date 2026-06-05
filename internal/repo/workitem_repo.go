@@ -295,7 +295,7 @@ func (r *WorkItemRepo) DeleteProjectAndTimeEntries(personID, projectID int64) er
 		return err
 	}
 	if parentID.Valid {
-		return errors.New("project not found")
+		return errors.New("work item is not a project")
 	}
 	if strings.EqualFold(name, "Default") {
 		return errors.New("cannot remove the 'Default' work item")

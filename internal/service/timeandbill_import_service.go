@@ -254,6 +254,13 @@ func (s *TimeAndBillImportService) plan(personID int64, payload timeAndBillExpor
 	}
 
 	conflicts := []TimeAndBillImportConflict{}
+	var overlapChecker *importOverlapChecker
+	if options.SkipConflicting {
+		overlapChecker, err = s.preloadImportOverlaps(personID, payload)
+		if err != nil {
+			return summary, nil, err
+		}
+	}
 	for _, entry := range payload.TimeEntries {
 		if _, ok, err := s.findMapping(entry.UUID, "time_entries"); err != nil {
 			return summary, nil, err
@@ -265,7 +272,7 @@ func (s *TimeAndBillImportService) plan(personID int64, payload timeAndBillExpor
 			}
 		} else {
 			if options.SkipConflicting {
-				conflict, hasConflict, err := s.findImportConflict(personID, payload, entry)
+				conflict, hasConflict, err := findImportConflict(payload, entry, overlapChecker)
 				if err != nil {
 					return summary, nil, err
 				}
@@ -532,15 +539,44 @@ func parseImportedTimeEntry(entry timeAndBillExportEntry) (int64, *int64, *int64
 	return start.Unix(), endEpoch, duration, nil
 }
 
-func (s *TimeAndBillImportService) findImportConflict(personID int64, payload timeAndBillExport, entry timeAndBillExportEntry) (TimeAndBillImportConflict, bool, error) {
+type importOverlapChecker struct {
+	entries []model.TimeEntry
+}
+
+func (s *TimeAndBillImportService) preloadImportOverlaps(personID int64, payload timeAndBillExport) (*importOverlapChecker, error) {
+	var minStart int64
+	var maxEnd int64
+	for _, entry := range payload.TimeEntries {
+		start, end, _, err := parseImportedTimeEntry(entry)
+		if err != nil {
+			return nil, err
+		}
+		if end == nil {
+			continue
+		}
+		if minStart == 0 || start < minStart {
+			minStart = start
+		}
+		if *end > maxEnd {
+			maxEnd = *end
+		}
+	}
+	if minStart == 0 || maxEnd == 0 {
+		return &importOverlapChecker{}, nil
+	}
+	entries, err := repo.NewTimeEntryRepo(s.db).ListOverlapping(personID, minStart, maxEnd)
+	if err != nil {
+		return nil, err
+	}
+	return &importOverlapChecker{entries: entries}, nil
+}
+
+func findImportConflict(payload timeAndBillExport, entry timeAndBillExportEntry, overlapChecker *importOverlapChecker) (TimeAndBillImportConflict, bool, error) {
 	start, end, _, err := parseImportedTimeEntry(entry)
 	if err != nil {
 		return TimeAndBillImportConflict{}, false, err
 	}
-	overlap, err := s.firstOverlap(personID, start, end)
-	if err != nil {
-		return TimeAndBillImportConflict{}, false, err
-	}
+	overlap := overlapChecker.firstOverlap(start, end)
 	if overlap == nil {
 		return TimeAndBillImportConflict{}, false, nil
 	}
@@ -565,18 +601,17 @@ func (s *TimeAndBillImportService) findImportConflict(personID int64, payload ti
 	}, true, nil
 }
 
-func (s *TimeAndBillImportService) firstOverlap(personID int64, start int64, end *int64) (*model.TimeEntry, error) {
-	if end == nil {
-		return nil, nil
+func (c *importOverlapChecker) firstOverlap(start int64, end *int64) *model.TimeEntry {
+	if c == nil || end == nil {
+		return nil
 	}
-	entries, err := repo.NewTimeEntryRepo(s.db).ListOverlapping(personID, start, *end)
-	if err != nil {
-		return nil, err
+	for i := range c.entries {
+		entry := &c.entries[i]
+		if entry.EndTime != nil && entry.StartTime < *end && *entry.EndTime > start {
+			return entry
+		}
 	}
-	if len(entries) == 0 {
-		return nil, nil
-	}
-	return &entries[0], nil
+	return nil
 }
 
 func hasOverlapTx(tx *sql.Tx, personID int64, start int64, end *int64) (*model.TimeEntry, error) {
