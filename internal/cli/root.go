@@ -34,6 +34,7 @@ func Execute() error {
 	rootCmd.AddCommand(showCmd)
 	rootCmd.AddCommand(removeCmd)
 	rootCmd.AddCommand(deleteCmd)
+	rootCmd.AddCommand(guiCmd)
 	rootCmd.AddCommand(startCmd)
 	rootCmd.AddCommand(stopCmd)
 	rootCmd.AddCommand(reportCmd)
