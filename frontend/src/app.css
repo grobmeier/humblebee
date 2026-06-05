@@ -377,14 +377,13 @@ code {
   grid-template-columns: 300px minmax(0, 1fr);
 }
 
-.projects-list-panel,
+.side-navigation-panel,
 .project-detail-panel,
-.reports-list-panel,
 .report-detail-panel {
   min-width: 0;
 }
 
-.projects-list-header,
+.side-navigation-header,
 .project-detail-header {
   display: flex;
   align-items: center;
@@ -393,7 +392,7 @@ code {
   margin-bottom: 14px;
 }
 
-.projects-list-header h2,
+.side-navigation-header h2,
 .project-detail-header h1 {
   margin: 0;
   color: #333;
@@ -401,7 +400,7 @@ code {
   letter-spacing: 0;
 }
 
-.projects-list-header h2 {
+.side-navigation-header h2 {
   font-size: 22px;
 }
 
@@ -518,13 +517,13 @@ code {
   background: #fafafa;
 }
 
-.projects-list,
+.side-navigation-list,
 .project-task-list {
   display: grid;
   gap: 8px;
 }
 
-.project-list-item {
+.side-navigation-item {
   width: 100%;
   min-height: 42px;
   padding: 10px 12px;
@@ -535,9 +534,10 @@ code {
   color: #333;
   font-weight: 700;
   text-align: left;
+  text-decoration: none;
 }
 
-.project-list-item.selected {
+.side-navigation-item.selected {
   border-left-color: #0a85c5;
   background: #f1f8fc;
 }
@@ -1273,7 +1273,7 @@ code {
 @media print {
   .hide-print,
   .topbar,
-  .reports-list-panel,
+  .side-navigation-panel,
   .report-filter-panel,
   .report-export-path {
     display: none !important;

@@ -1,3 +1,4 @@
+import { SideNavigationList } from "../components/SideNavigationList";
 import type { ProjectsPageText, WorkItem } from "./projectTypes";
 
 type ProjectsListProps = {
@@ -10,30 +11,18 @@ type ProjectsListProps = {
 
 export function ProjectsList({ projects, selectedProjectId, t, onCreateProject, onSelectProject }: ProjectsListProps) {
   return (
-    <aside className="projects-list-panel" aria-label={t.projectList}>
-      <div className="projects-list-header">
-        <h2>{t.projectList}</h2>
+    <SideNavigationList
+      action={
         <button className="primary-button" type="button" onClick={onCreateProject}>
           {t.addProject}
         </button>
-      </div>
-
-      {projects.length ? (
-        <div className="projects-list">
-          {projects.map((project) => (
-            <button
-              className={`project-list-item ${project.id === selectedProjectId ? "selected" : ""}`}
-              key={project.id}
-              type="button"
-              onClick={() => onSelectProject(project.id)}
-            >
-              {project.name}
-            </button>
-          ))}
-        </div>
-      ) : (
-        <p className="projects-empty">{t.emptyProjects}</p>
-      )}
-    </aside>
+      }
+      ariaLabel={t.projectList}
+      emptyText={t.emptyProjects}
+      items={projects.map((project) => ({ id: project.id, label: project.name }))}
+      selectedId={selectedProjectId}
+      title={t.projectList}
+      onSelect={(id) => onSelectProject(Number(id))}
+    />
   );
 }
