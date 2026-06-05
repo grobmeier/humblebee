@@ -1,7 +1,7 @@
 import { DashboardDateInput } from "../dashboard/TimeEntryModal";
 import type { DateLanguage } from "../dashboard/dateFormat";
 import { monthOptions } from "./reportUtils";
-import type { ReportFilter, WorkItem } from "./reportTypes";
+import type { ReportFilter, ReportsPageText, WorkItem } from "./reportTypes";
 
 type ReportFilterBarProps = {
   filter: ReportFilter;
@@ -10,6 +10,7 @@ type ReportFilterBarProps = {
   projectOptions: WorkItem[];
   showDecimal: boolean;
   supportsDecimal: boolean;
+  t: ReportsPageText;
   onChange: (filter: ReportFilter) => void;
   onExport: () => void;
   onPrint: () => void;
@@ -23,6 +24,7 @@ export function ReportFilterBar({
   projectOptions,
   showDecimal,
   supportsDecimal,
+  t,
   onChange,
   onExport,
   onPrint,
@@ -30,18 +32,18 @@ export function ReportFilterBar({
 }: ReportFilterBarProps) {
   return (
     <div className="report-filter-panel hide-print">
-      <div className="report-filter-tabs" role="tablist" aria-label="Report filter mode">
+      <div className="report-filter-tabs" role="tablist" aria-label={t.filterMode}>
         <button className={filter.mode === "monthly" ? "active" : ""} type="button" onClick={() => onChange({ ...filter, mode: "monthly" })}>
-          Monthly
+          {t.monthly}
         </button>
         <button className={filter.mode === "daily" ? "active" : ""} type="button" onClick={() => onChange({ ...filter, mode: "daily" })}>
-          Date range
+          {t.dateRange}
         </button>
       </div>
       <div className="report-filter-controls">
         {needsProject ? (
           <select className="tab-form-control tab-form-control--small" value={filter.projectId} onChange={(event) => onChange({ ...filter, projectId: Number(event.target.value) })}>
-            <option value={0}>First reportable project</option>
+            <option value={0}>{t.firstReportableProject}</option>
             {projectOptions.map((project) => (
               <option key={project.id} value={project.id}>
                 {project.name}
@@ -52,7 +54,7 @@ export function ReportFilterBar({
         {filter.mode === "monthly" ? (
           <>
             <select className="tab-form-control tab-form-control--small" value={filter.month} onChange={(event) => onChange({ ...filter, month: Number(event.target.value) })}>
-              {monthOptions.map(([value, label]) => (
+              {monthOptions(t.months).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
@@ -78,10 +80,10 @@ export function ReportFilterBar({
           </>
         )}
         <button className="secondary-button" type="button" onClick={onExport}>
-          Export Excel
+          {t.exportExcel}
         </button>
         <button className="secondary-button" type="button" onClick={onPrint}>
-          Print
+          {t.print}
         </button>
         {supportsDecimal ? (
           <button className="secondary-button" type="button" onClick={onToggleDecimal}>

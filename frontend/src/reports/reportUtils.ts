@@ -22,14 +22,15 @@ export function defaultReportFilter(): ReportFilter {
   };
 }
 
-export function toReportRequest(filter: ReportFilter): guiapp.ReportRequest {
+export function toReportRequest(filter: ReportFilter, language: string): guiapp.ReportRequest {
   return {
     mode: filter.mode,
     month: filter.month,
     year: filter.year,
     startDate: filter.startDate,
     endDate: filter.endDate,
-    projectId: filter.projectId
+    projectId: filter.projectId,
+    language
   } as guiapp.ReportRequest;
 }
 
@@ -47,17 +48,6 @@ export function fileURL(path: string): string {
   return `file://${path}`;
 }
 
-export const monthOptions = [
-  ["1", "January"],
-  ["2", "February"],
-  ["3", "March"],
-  ["4", "April"],
-  ["5", "May"],
-  ["6", "June"],
-  ["7", "July"],
-  ["8", "August"],
-  ["9", "September"],
-  ["10", "October"],
-  ["11", "November"],
-  ["12", "December"]
-];
+export function monthOptions(months: string[]) {
+  return months.map((label, index) => [String(index + 1), label] as const);
+}

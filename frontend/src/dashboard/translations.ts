@@ -36,6 +36,36 @@ export const translations = {
       showHiddenTasks: "Ausgeblendete Aufgaben anzeigen",
       tasks: "Aufgaben"
     },
+    reportsPage: {
+      columns: {
+        date: "Datum",
+        description: "Beschreibung",
+        duration: "Dauer",
+        end: "Ende",
+        project: "Projekt",
+        projectTime: "Projektzeit",
+        start: "Start",
+        task: "Aufgabe",
+        total: "Gesamt"
+      },
+      dateRange: "Datumsbereich",
+      emptyReport: "Keine Berichtsdaten fuer diesen Zeitraum.",
+      exportExcel: "Excel exportieren",
+      filterMode: "Berichtsfilter",
+      firstReportableProject: "Erstes auswertbares Projekt",
+      loadingReport: "Bericht wird geladen...",
+      monthly: "Monatlich",
+      months: ["Januar", "Februar", "Maerz", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"],
+      print: "Drucken",
+      reportList: "Berichte",
+      savedTo: "Gespeichert unter",
+      titles: {
+        "worktime-by-month": "Arbeitszeit pro Monat",
+        "worktime-grouped-by-project": "Arbeitszeit nach Projekt",
+        "worktime-task-details": "Arbeitszeitdetails nach Aufgabe",
+        timesheet: "Stundenzettel"
+      }
+    },
     stopwatch: {
       book: "Buchen",
       createStopwatch: "Stoppuhr anlegen",
@@ -80,6 +110,36 @@ export const translations = {
       showHiddenTasks: "Show hidden tasks",
       tasks: "Tasks"
     },
+    reportsPage: {
+      columns: {
+        date: "Date",
+        description: "Description",
+        duration: "Duration",
+        end: "End",
+        project: "Project",
+        projectTime: "Project time",
+        start: "Start",
+        task: "Task",
+        total: "Total"
+      },
+      dateRange: "Date range",
+      emptyReport: "No report data for this period.",
+      exportExcel: "Export Excel",
+      filterMode: "Report filter mode",
+      firstReportableProject: "First reportable project",
+      loadingReport: "Loading report...",
+      monthly: "Monthly",
+      months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+      print: "Print",
+      reportList: "Reports",
+      savedTo: "Saved to",
+      titles: {
+        "worktime-by-month": "Worktime by month",
+        "worktime-grouped-by-project": "Worktime grouped by project",
+        "worktime-task-details": "Worktime task details",
+        timesheet: "Timesheet"
+      }
+    },
     stopwatch: {
       book: "Book",
       createStopwatch: "Create stopwatch",
@@ -123,6 +183,36 @@ export const translations = {
     selectProject: string;
     showHiddenTasks: string;
     tasks: string;
+  };
+  reportsPage: {
+    columns: {
+      date: string;
+      description: string;
+      duration: string;
+      end: string;
+      project: string;
+      projectTime: string;
+      start: string;
+      task: string;
+      total: string;
+    };
+    dateRange: string;
+    emptyReport: string;
+    exportExcel: string;
+    filterMode: string;
+    firstReportableProject: string;
+    loadingReport: string;
+    monthly: string;
+    months: string[];
+    print: string;
+    reportList: string;
+    savedTo: string;
+    titles: {
+      "worktime-by-month": string;
+      "worktime-grouped-by-project": string;
+      "worktime-task-details": string;
+      timesheet: string;
+    };
   };
   stopwatch: {
     createStopwatch: string;

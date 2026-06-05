@@ -21,9 +21,35 @@ export type ReportData =
   | guiapp.WorktimeTaskDetailsReport
   | guiapp.TimesheetReport;
 
-export const reportDefinitions: Array<{ slug: ReportSlug; title: string; needsProject: boolean; decimalToggle: boolean }> = [
-  { slug: "worktime-by-month", title: "Worktime by month", needsProject: false, decimalToggle: false },
-  { slug: "worktime-grouped-by-project", title: "Worktime grouped by project", needsProject: false, decimalToggle: false },
-  { slug: "worktime-task-details", title: "Worktime task details", needsProject: true, decimalToggle: false },
-  { slug: "timesheet", title: "Timesheet", needsProject: false, decimalToggle: true }
+export type ReportsPageText = {
+  columns: {
+    date: string;
+    description: string;
+    duration: string;
+    end: string;
+    project: string;
+    projectTime: string;
+    start: string;
+    task: string;
+    total: string;
+  };
+  emptyReport: string;
+  exportExcel: string;
+  filterMode: string;
+  firstReportableProject: string;
+  loadingReport: string;
+  months: string[];
+  monthly: string;
+  print: string;
+  reportList: string;
+  savedTo: string;
+  dateRange: string;
+  titles: Record<ReportSlug, string>;
+};
+
+export const reportDefinitions: Array<{ slug: ReportSlug; needsProject: boolean; decimalToggle: boolean }> = [
+  { slug: "worktime-by-month", needsProject: false, decimalToggle: false },
+  { slug: "worktime-grouped-by-project", needsProject: false, decimalToggle: false },
+  { slug: "worktime-task-details", needsProject: true, decimalToggle: false },
+  { slug: "timesheet", needsProject: false, decimalToggle: true }
 ];

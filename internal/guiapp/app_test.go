@@ -623,6 +623,45 @@ func TestExportWorktimeByMonthReportWritesExcelFile(t *testing.T) {
 	}
 }
 
+func TestExportWorktimeByMonthReportUsesGermanLabels(t *testing.T) {
+	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
+
+	app := New()
+	if err := app.Init("user@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	project, err := app.CreateProject("Client")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.CreateTimeEntry(CreateTimeEntryRequest{
+		WorkItemID: project.ID,
+		StartDate:  "2026-06-04",
+		StartTime:  "09:00",
+		EndDate:    "2026-06-04",
+		EndTime:    "10:00",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	path, err := app.ExportWorktimeByMonthReport(ReportRequest{
+		Mode:     "monthly",
+		Month:    6,
+		Year:     2026,
+		Language: "de",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	worksheet := readXLSXWorksheet(t, path)
+	if !strings.Contains(worksheet, "Projekt") || !strings.Contains(worksheet, "Aufgabe") || !strings.Contains(worksheet, "Dauer") {
+		t.Fatalf("expected worksheet to contain German labels, got %s", worksheet)
+	}
+	if strings.Contains(worksheet, "Duration") {
+		t.Fatalf("expected worksheet not to contain English duration label, got %s", worksheet)
+	}
+}
+
 func TestCreateTaskRejectsTaskParent(t *testing.T) {
 	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
 

@@ -15,8 +15,9 @@ func (a *App) ExportWorktimeByMonthReport(req ReportRequest) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	labels := reportExportLabelsFor(req.Language)
 	rows := [][]string{
-		{"Project", "Task", "Date", "Start", "End", "Duration", "Description"},
+		{labels.Project, labels.Task, labels.Date, labels.Start, labels.End, labels.Duration, labels.Description},
 	}
 	for _, row := range report.Rows {
 		rows = append(rows, []string{
@@ -29,13 +30,13 @@ func (a *App) ExportWorktimeByMonthReport(req ReportRequest) (string, error) {
 			row.Description,
 		})
 	}
-	rows = append(rows, []string{"", "", "", "", "Total", report.TotalDuration, ""})
+	rows = append(rows, []string{"", "", "", "", labels.Total, report.TotalDuration, ""})
 
 	path, err := reportExportPath("worktime-by-month", req)
 	if err != nil {
 		return "", err
 	}
-	if err := writeSimpleXLSX(path, "Report", rows); err != nil {
+	if err := writeSimpleXLSX(path, labels.ReportSheet, rows); err != nil {
 		return "", err
 	}
 	return path, nil
@@ -46,9 +47,10 @@ func (a *App) ExportWorktimeGroupedByProjectReport(req ReportRequest) (string, e
 	if err != nil {
 		return "", err
 	}
-	rows := [][]string{{"Project", "Task", "Date", "Start", "End", "Duration", "Description"}}
+	labels := reportExportLabelsFor(req.Language)
+	rows := [][]string{{labels.Project, labels.Task, labels.Date, labels.Start, labels.End, labels.Duration, labels.Description}}
 	for _, group := range report.Groups {
-		rows = append(rows, []string{group.ProjectName, "", "", "", "Project total", group.TotalDuration, ""})
+		rows = append(rows, []string{group.ProjectName, "", "", "", labels.ProjectTotal, group.TotalDuration, ""})
 		for _, row := range group.Rows {
 			rows = append(rows, []string{
 				row.ProjectName,
@@ -61,13 +63,13 @@ func (a *App) ExportWorktimeGroupedByProjectReport(req ReportRequest) (string, e
 			})
 		}
 	}
-	rows = append(rows, []string{"", "", "", "", "Total", report.TotalDuration, ""})
+	rows = append(rows, []string{"", "", "", "", labels.Total, report.TotalDuration, ""})
 
 	path, err := reportExportPath("worktime-grouped-by-project", req)
 	if err != nil {
 		return "", err
 	}
-	if err := writeSimpleXLSX(path, "Report", rows); err != nil {
+	if err := writeSimpleXLSX(path, labels.ReportSheet, rows); err != nil {
 		return "", err
 	}
 	return path, nil
@@ -78,17 +80,18 @@ func (a *App) ExportWorktimeTaskDetailsReport(req ReportRequest) (string, error)
 	if err != nil {
 		return "", err
 	}
-	rows := [][]string{{"Project", "Task", "Duration"}}
+	labels := reportExportLabelsFor(req.Language)
+	rows := [][]string{{labels.Project, labels.Task, labels.Duration}}
 	for _, row := range report.Rows {
 		rows = append(rows, []string{row.ProjectName, row.TaskName, row.Duration})
 	}
-	rows = append(rows, []string{"", "Total", report.TotalDuration})
+	rows = append(rows, []string{"", labels.Total, report.TotalDuration})
 
 	path, err := reportExportPath("worktime-task-details", req)
 	if err != nil {
 		return "", err
 	}
-	if err := writeSimpleXLSX(path, "Report", rows); err != nil {
+	if err := writeSimpleXLSX(path, labels.ReportSheet, rows); err != nil {
 		return "", err
 	}
 	return path, nil
@@ -99,29 +102,81 @@ func (a *App) ExportTimesheetReport(req ReportRequest) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	labels := reportExportLabelsFor(req.Language)
 	rows := [][]string{}
 	if req.Mode == "daily" {
-		rows = append(rows, []string{"Date", "Total", "Project time"})
+		rows = append(rows, []string{labels.Date, labels.Total, labels.ProjectTime})
 		for _, row := range report.DailyRows {
 			rows = append(rows, []string{row.Date, row.TotalDuration, row.ProjectDuration})
 		}
-		rows = append(rows, []string{"Total", report.TotalDuration, report.TotalDuration})
+		rows = append(rows, []string{labels.Total, report.TotalDuration, report.TotalDuration})
 	} else {
-		rows = append(rows, []string{"User", "Project", "Duration"})
+		rows = append(rows, []string{labels.User, labels.Project, labels.Duration})
 		for _, row := range report.ProjectRows {
 			rows = append(rows, []string{report.UserName, row.ProjectName, row.Duration})
 		}
-		rows = append(rows, []string{"", "Total", report.TotalDuration})
+		rows = append(rows, []string{"", labels.Total, report.TotalDuration})
 	}
 
 	path, err := reportExportPath("timesheet", req)
 	if err != nil {
 		return "", err
 	}
-	if err := writeSimpleXLSX(path, "Timesheet", rows); err != nil {
+	if err := writeSimpleXLSX(path, labels.TimesheetSheet, rows); err != nil {
 		return "", err
 	}
 	return path, nil
+}
+
+type reportExportLabels struct {
+	Date           string
+	Description    string
+	Duration       string
+	End            string
+	Project        string
+	ProjectTime    string
+	ProjectTotal   string
+	ReportSheet    string
+	Start          string
+	Task           string
+	TimesheetSheet string
+	Total          string
+	User           string
+}
+
+func reportExportLabelsFor(language string) reportExportLabels {
+	if language == "de" {
+		return reportExportLabels{
+			Date:           "Datum",
+			Description:    "Beschreibung",
+			Duration:       "Dauer",
+			End:            "Ende",
+			Project:        "Projekt",
+			ProjectTime:    "Projektzeit",
+			ProjectTotal:   "Projektsumme",
+			ReportSheet:    "Bericht",
+			Start:          "Start",
+			Task:           "Aufgabe",
+			TimesheetSheet: "Stundenzettel",
+			Total:          "Gesamt",
+			User:           "Benutzer",
+		}
+	}
+	return reportExportLabels{
+		Date:           "Date",
+		Description:    "Description",
+		Duration:       "Duration",
+		End:            "End",
+		Project:        "Project",
+		ProjectTime:    "Project time",
+		ProjectTotal:   "Project total",
+		ReportSheet:    "Report",
+		Start:          "Start",
+		Task:           "Task",
+		TimesheetSheet: "Timesheet",
+		Total:          "Total",
+		User:           "User",
+	}
 }
 
 func reportExportPath(slug string, req ReportRequest) (string, error) {

@@ -85,6 +85,7 @@ export namespace guiapp {
 	    startDate: string;
 	    endDate: string;
 	    projectId: number;
+	    language: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new ReportRequest(source);
@@ -98,6 +99,7 @@ export namespace guiapp {
 	        this.startDate = source["startDate"];
 	        this.endDate = source["endDate"];
 	        this.projectId = source["projectId"];
+	        this.language = source["language"];
 	    }
 	}
 	

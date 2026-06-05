@@ -1,12 +1,18 @@
 import type { ReactNode } from "react";
 import type { guiapp } from "../../wailsjs/go/models";
 import { formatDecimalDuration } from "./reportUtils";
+import type { ReportsPageText } from "./reportTypes";
 
-export function WorktimeByMonthTable({ report }: { report: guiapp.WorktimeByMonthReport }) {
+type ReportTableProps<T> = {
+  report: T;
+  t: ReportsPageText;
+};
+
+export function WorktimeByMonthTable({ report, t }: ReportTableProps<guiapp.WorktimeByMonthReport>) {
   const rows = report.rows ?? [];
-  if (report.empty || !rows.length) return <p className="projects-empty">No report data for this period.</p>;
+  if (report.empty || !rows.length) return <p className="projects-empty">{t.emptyReport}</p>;
   return (
-    <ReportTable headers={["Project", "Task", "Date", "Start", "End", "Duration", "Description"]}>
+    <ReportTable headers={[t.columns.project, t.columns.task, t.columns.date, t.columns.start, t.columns.end, t.columns.duration, t.columns.description]}>
       {rows.map((row, index) => (
         <tr key={`${row.date}-${row.startTime}-${index}`}>
           <td>{row.projectName}</td>
@@ -27,15 +33,15 @@ export function WorktimeByMonthTable({ report }: { report: guiapp.WorktimeByMont
   );
 }
 
-export function GroupedByProjectTable({ report }: { report: guiapp.WorktimeGroupedByProjectReport }) {
+export function GroupedByProjectTable({ report, t }: ReportTableProps<guiapp.WorktimeGroupedByProjectReport>) {
   const groups = report.groups ?? [];
-  if (report.empty || !groups.length) return <p className="projects-empty">No report data for this period.</p>;
+  if (report.empty || !groups.length) return <p className="projects-empty">{t.emptyReport}</p>;
   return (
     <>
       {groups.map((group) => (
         <section className="report-section" key={group.projectId}>
           <h2>{group.projectName}</h2>
-          <ReportTable headers={["Task", "Date", "Start", "End", "Duration", "Description"]}>
+          <ReportTable headers={[t.columns.task, t.columns.date, t.columns.start, t.columns.end, t.columns.duration, t.columns.description]}>
             {(group.rows ?? []).map((row, index) => (
               <tr key={`${row.date}-${row.startTime}-${index}`}>
                 <td>{row.taskName}</td>
@@ -58,11 +64,11 @@ export function GroupedByProjectTable({ report }: { report: guiapp.WorktimeGroup
   );
 }
 
-export function TaskDetailsTable({ report }: { report: guiapp.WorktimeTaskDetailsReport }) {
+export function TaskDetailsTable({ report, t }: ReportTableProps<guiapp.WorktimeTaskDetailsReport>) {
   const rows = report.rows ?? [];
-  if (report.empty || !rows.length) return <p className="projects-empty">No report data for this period.</p>;
+  if (report.empty || !rows.length) return <p className="projects-empty">{t.emptyReport}</p>;
   return (
-    <ReportTable headers={["Project", "Task", "Duration"]}>
+    <ReportTable headers={[t.columns.project, t.columns.task, t.columns.duration]}>
       {rows.map((row) => (
         <tr key={`${row.projectId}-${row.taskId}`}>
           <td>{row.projectName}</td>
@@ -78,13 +84,13 @@ export function TaskDetailsTable({ report }: { report: guiapp.WorktimeTaskDetail
   );
 }
 
-export function TimesheetTable({ report, showDecimal }: { report: guiapp.TimesheetReport; showDecimal: boolean }) {
-  if (report.empty) return <p className="projects-empty">No report data for this period.</p>;
+export function TimesheetTable({ report, showDecimal, t }: ReportTableProps<guiapp.TimesheetReport> & { showDecimal: boolean }) {
+  if (report.empty) return <p className="projects-empty">{t.emptyReport}</p>;
   const dailyRows = report.dailyRows ?? [];
   const projectRows = report.projectRows ?? [];
   if (dailyRows.length) {
     return (
-      <ReportTable headers={["Date", "Total", "Project time"]}>
+      <ReportTable headers={[t.columns.date, t.columns.total, t.columns.projectTime]}>
         {dailyRows.map((row) => (
           <tr key={row.date}>
             <td>{row.date}</td>
@@ -103,7 +109,7 @@ export function TimesheetTable({ report, showDecimal }: { report: guiapp.Timeshe
   return (
     <section className="report-section">
       <h2>{report.userName}</h2>
-      <ReportTable headers={["Project", "Duration"]}>
+      <ReportTable headers={[t.columns.project, t.columns.duration]}>
         {projectRows.map((row) => (
           <tr key={row.projectId}>
             <td>{row.projectName}</td>
