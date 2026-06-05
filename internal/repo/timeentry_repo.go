@@ -170,31 +170,61 @@ func (r *TimeEntryRepo) UpdateCompleted(e model.TimeEntry) error {
 	return nil
 }
 
-func (r *TimeEntryRepo) Stop(entryID int64, endTime int64, duration int64) error {
-	_, err := r.db.Exec(`
+func (r *TimeEntryRepo) Stop(personID int64, entryID int64, endTime int64, duration int64) error {
+	res, err := r.db.Exec(`
 		UPDATE time_entries
 		SET end_time = ?, duration = ?, updated_at = strftime('%s','now')
-		WHERE id = ?
-	`, endTime, duration, entryID)
-	return err
+		WHERE id = ? AND person_id = ?
+	`, endTime, duration, entryID, personID)
+	if err != nil {
+		return err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return errors.New("time entry not found")
+	}
+	return nil
 }
 
-func (r *TimeEntryRepo) MarkStopwatchConflict(entryID int64, endTime int64, duration int64) error {
-	_, err := r.db.Exec(`
+func (r *TimeEntryRepo) MarkStopwatchConflict(personID int64, entryID int64, endTime int64, duration int64) error {
+	res, err := r.db.Exec(`
 		UPDATE time_entries
 		SET end_time = ?, duration = ?, entry_source = 'stopwatch_conflict', updated_at = strftime('%s','now')
-		WHERE id = ?
-	`, endTime, duration, entryID)
-	return err
+		WHERE id = ? AND person_id = ?
+	`, endTime, duration, entryID, personID)
+	if err != nil {
+		return err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return errors.New("time entry not found")
+	}
+	return nil
 }
 
-func (r *TimeEntryRepo) MarkStopwatchUnbooked(entryID int64) error {
-	_, err := r.db.Exec(`
+func (r *TimeEntryRepo) MarkStopwatchUnbooked(personID int64, entryID int64) error {
+	res, err := r.db.Exec(`
 		UPDATE time_entries
 		SET entry_source = 'stopwatch_unbooked', updated_at = strftime('%s','now')
-		WHERE id = ?
-	`, entryID)
-	return err
+		WHERE id = ? AND person_id = ?
+	`, entryID, personID)
+	if err != nil {
+		return err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return errors.New("time entry not found")
+	}
+	return nil
 }
 
 func (r *TimeEntryRepo) HasOverlap(personID int64, windowStart, windowEnd int64) (bool, error) {

@@ -581,6 +581,7 @@ export default function App() {
                 <DashboardCalendar
                   language={language}
                   selectedDate={selectedDate}
+                  t={t.dashboardCalendar}
                   onAddEntry={onAddEntry}
                   onSelectDate={(date) => setSelectedDate(atLocalNoon(date))}
                 />

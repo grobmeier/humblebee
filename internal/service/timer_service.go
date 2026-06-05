@@ -71,7 +71,7 @@ func (s *TimerService) Stop(personID int64, now time.Time, loc *time.Location) (
 		return nil, errors.New("time entry overlaps with an existing entry")
 	}
 	duration := end - running.StartTime
-	if err := s.entries.Stop(running.ID, end, duration); err != nil {
+	if err := s.entries.Stop(personID, running.ID, end, duration); err != nil {
 		return nil, err
 	}
 

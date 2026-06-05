@@ -43,7 +43,7 @@ func TestTimeEntryDeleteByID(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := entries.Stop(id, end, end-start); err != nil {
+	if err := entries.Stop(personID, id, end, end-start); err != nil {
 		t.Fatal(err)
 	}
 
@@ -210,7 +210,7 @@ func TestTimeEntryCloseStopwatchDeletesStoppedStopwatch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := entries.Stop(id, end, end-start); err != nil {
+	if err := entries.Stop(personID, id, end, end-start); err != nil {
 		t.Fatal(err)
 	}
 	if err := entries.CloseStopwatchByEntryID(personID, id); err != nil {
@@ -265,7 +265,7 @@ func TestTimeEntryConflictingStopwatchDoesNotOverlapManualEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := entries.MarkStopwatchConflict(id, start+3600, 3600); err != nil {
+	if err := entries.MarkStopwatchConflict(personID, id, start+3600, 3600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -275,5 +275,72 @@ func TestTimeEntryConflictingStopwatchDoesNotOverlapManualEntry(t *testing.T) {
 	}
 	if overlaps {
 		t.Fatal("expected conflicting stopwatch not to block manual entry")
+	}
+}
+
+func TestTimeEntryStopwatchStateUpdatesAreScopedToPerson(t *testing.T) {
+	database := openMemory(t)
+	defer database.Close()
+
+	if err := db.Migrate(database); err != nil {
+		t.Fatal(err)
+	}
+
+	personRepo := NewPersonRepo(database)
+	personID, err := personRepo.CreateDefault(model.Person{
+		UUID:      uuid.NewString(),
+		Email:     "user@example.com",
+		Username:  "user",
+		CreatedAt: time.Now().UTC().Unix(),
+		IsActive:  true,
+		IsDefault: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	otherPersonID, err := personRepo.CreateDefault(model.Person{
+		UUID:      uuid.NewString(),
+		Email:     "other@example.com",
+		Username:  "other",
+		CreatedAt: time.Now().UTC().Unix(),
+		IsActive:  true,
+		IsDefault: false,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	entries := NewTimeEntryRepo(database)
+	start := time.Date(2026, 5, 12, 9, 0, 0, 0, time.UTC).Unix()
+	id, err := entries.Start(model.TimeEntry{
+		UUID:      uuid.NewString(),
+		PersonID:  personID,
+		StartTime: start,
+		CreatedAt: start,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := entries.MarkStopwatchConflict(otherPersonID, id, start+3600, 3600); err == nil {
+		t.Fatal("expected conflict update with wrong person to fail")
+	}
+	entry, err := entries.GetByID(personID, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entry == nil || entry.EndTime != nil || entry.EntrySource != "stopwatch" {
+		t.Fatalf("expected wrong-person conflict update not to change stopwatch, got %#v", entry)
+	}
+
+	if err := entries.MarkStopwatchUnbooked(otherPersonID, id); err == nil {
+		t.Fatal("expected unbook update with wrong person to fail")
+	}
+	entry, err = entries.GetByID(personID, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if entry == nil || entry.EntrySource != "stopwatch" {
+		t.Fatalf("expected wrong-person unbook update not to change stopwatch, got %#v", entry)
 	}
 }

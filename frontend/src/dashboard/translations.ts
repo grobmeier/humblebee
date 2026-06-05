@@ -2,6 +2,16 @@ export type Language = "de" | "en";
 
 export const translations = {
   de: {
+    dashboardCalendar: {
+      addTime: "Zeit erfassen",
+      currentWeek: "Aktuelle Woche",
+      navigation: "Kalendernavigation",
+      nextDay: "Naechster Tag",
+      nextWeek: "Naechste Woche",
+      previousDay: "Vorheriger Tag",
+      previousWeek: "Vorherige Woche",
+      today: "Heute"
+    },
     nav: {
       dashboard: "Arbeitsplatz",
       projects: "Projekte",
@@ -76,6 +86,16 @@ export const translations = {
     }
   },
   en: {
+    dashboardCalendar: {
+      addTime: "Add time",
+      currentWeek: "Current week",
+      navigation: "Calendar navigation",
+      nextDay: "Next day",
+      nextWeek: "Next week",
+      previousDay: "Previous day",
+      previousWeek: "Previous week",
+      today: "Today"
+    },
     nav: {
       dashboard: "Dashboard",
       projects: "Projects",
@@ -150,6 +170,16 @@ export const translations = {
     }
   }
 } satisfies Record<Language, {
+  dashboardCalendar: {
+    addTime: string;
+    currentWeek: string;
+    navigation: string;
+    nextDay: string;
+    nextWeek: string;
+    previousDay: string;
+    previousWeek: string;
+    today: string;
+  };
   nav: {
     dashboard: string;
     projects: string;

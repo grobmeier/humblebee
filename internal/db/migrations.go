@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-const schemaVersion = 5
+const schemaVersion = 6
 
 func IsInitialized(db *sql.DB) (bool, error) {
 	var v string
@@ -177,9 +177,16 @@ func ensureTimeEntrySourceColumn(tx *sql.Tx) error {
 		return err
 	}
 	if exists {
-		return nil
+		return backfillLegacyRunningStopwatches(tx)
 	}
-	_, err = tx.Exec(`ALTER TABLE time_entries ADD COLUMN entry_source TEXT NOT NULL DEFAULT 'manual';`)
+	if _, err := tx.Exec(`ALTER TABLE time_entries ADD COLUMN entry_source TEXT NOT NULL DEFAULT 'manual';`); err != nil {
+		return err
+	}
+	return backfillLegacyRunningStopwatches(tx)
+}
+
+func backfillLegacyRunningStopwatches(tx *sql.Tx) error {
+	_, err := tx.Exec(`UPDATE time_entries SET entry_source = 'stopwatch' WHERE end_time IS NULL AND entry_source = 'manual';`)
 	return err
 }
 

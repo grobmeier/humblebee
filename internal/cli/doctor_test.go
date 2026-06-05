@@ -41,18 +41,18 @@ func TestBackfillTZ(t *testing.T) {
 	start := time.Now().UTC().Add(-2 * time.Hour).Unix()
 	end := time.Now().UTC().Add(-1 * time.Hour).Unix()
 	id, err := entries.Start(model.TimeEntry{
-		UUID:       uuid.NewString(),
-		PersonID:   personID,
-		WorkItemID: nil,
-		StartTime:  start,
-		CreatedAt:  start,
-		TZName:     "",
+		UUID:        uuid.NewString(),
+		PersonID:    personID,
+		WorkItemID:  nil,
+		StartTime:   start,
+		CreatedAt:   start,
+		TZName:      "",
 		TZOffsetMin: 0,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := entries.Stop(id, end, end-start); err != nil {
+	if err := entries.Stop(personID, id, end, end-start); err != nil {
 		t.Fatal(err)
 	}
 
@@ -81,4 +81,3 @@ func TestBackfillTZ(t *testing.T) {
 		t.Fatalf("expected missing=0, got %d", missing)
 	}
 }
-

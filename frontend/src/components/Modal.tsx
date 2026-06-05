@@ -42,9 +42,9 @@ type FormRowProps = {
 export function FormRow({ children, controlsClassName = "tab-form-controls", label, labelHidden = false }: FormRowProps) {
   return (
     <div className="tab-form-row">
-      <label className="tab-form-label" aria-hidden={labelHidden || undefined}>
+      <div className="tab-form-label" aria-hidden={labelHidden || undefined}>
         {label}
-      </label>
+      </div>
       <div className={controlsClassName}>{children}</div>
     </div>
   );

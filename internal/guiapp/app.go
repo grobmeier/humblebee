@@ -513,7 +513,7 @@ func (a *App) DeleteTimeEntry(entryID int64) error {
 		return nil
 	}
 	if entry.EntrySource == "stopwatch" && entry.EndTime != nil {
-		return entriesRepo.MarkStopwatchUnbooked(entryID)
+		return entriesRepo.MarkStopwatchUnbooked(personID, entryID)
 	}
 	return entriesRepo.DeleteByID(personID, entryID)
 }
@@ -1277,12 +1277,12 @@ func (a *App) Start(workItemID int64) error {
 		return err
 	}
 	if overlaps {
-		if err := timerRepo.MarkStopwatchConflict(running.ID, end, end-running.StartTime); err != nil {
+		if err := timerRepo.MarkStopwatchConflict(personID, running.ID, end, end-running.StartTime); err != nil {
 			return err
 		}
 		return stopwatchOverlapError(running, now, time.Local)
 	}
-	return timerRepo.Stop(running.ID, end, end-running.StartTime)
+	return timerRepo.Stop(personID, running.ID, end, end-running.StartTime)
 }
 
 func workItemDTO(item model.WorkItem) *WorkItem {
@@ -1325,7 +1325,7 @@ func (a *App) Stop() (*StopResult, error) {
 		return nil, err
 	}
 	if overlaps {
-		if err := entriesRepo.MarkStopwatchConflict(running.ID, end, end-running.StartTime); err != nil {
+		if err := entriesRepo.MarkStopwatchConflict(personID, running.ID, end, end-running.StartTime); err != nil {
 			return nil, err
 		}
 		return nil, stopwatchOverlapError(running, now, time.Local)
