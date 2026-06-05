@@ -573,9 +573,7 @@ export default function App() {
   function openStopwatchConfirmationModal(error: StopwatchOverlapError) {
     const selection = timeEntrySelectionForWorkItem(error.workItemId || selectedWorkItemId);
     setError("");
-    setTimeEntryModalError(
-      "Die Stoppuhr ueberschneidet sich mit bereits gebuchter Zeit. Passe den Zeitraum an und speichere den Eintrag."
-    );
+    setTimeEntryModalError(t.timeEntryModal.conflictMessage);
     setTimeEntryForm({
       description: "",
       endDate: error.endDate,
@@ -596,9 +594,7 @@ export default function App() {
   function onBookStopwatch(stopwatch: guiapp.Stopwatch) {
     const selection = timeEntrySelectionForWorkItem(stopwatch.workItemId ?? selectedWorkItemId);
     setError("");
-    setTimeEntryModalError(
-      "Die Stoppuhr ueberschneidet sich mit bereits gebuchter Zeit. Passe den Zeitraum an und speichere den Eintrag."
-    );
+    setTimeEntryModalError(t.timeEntryModal.conflictMessage);
     setTimeEntryForm({
       description: "",
       endDate: stopwatch.endDate,
@@ -621,11 +617,11 @@ export default function App() {
     setTimeEntryModalError(null);
 
     if (!timeEntryForm.projectId) {
-      setTimeEntryModalError("Bitte waehle ein Projekt aus.");
+      setTimeEntryModalError(t.timeEntryModal.selectProjectRequired);
       return;
     }
     if (!timeEntryForm.taskId) {
-      setTimeEntryModalError("Bitte waehle eine Taetigkeit aus.");
+      setTimeEntryModalError(t.timeEntryModal.selectTaskRequired);
       return;
     }
 
@@ -767,6 +763,7 @@ export default function App() {
                 <DashboardCalendar
                   language={language}
                   selectedDate={selectedDate}
+                  t={t.dashboardCalendar}
                   onAddEntry={onAddEntry}
                   onSelectDate={(date) => setSelectedDate(atLocalNoon(date))}
                 />
@@ -826,6 +823,7 @@ export default function App() {
           form={timeEntryForm}
           isSaving={isSavingTimeEntry}
           language={language}
+          t={t.timeEntryModal}
           workItems={workItems.filter((workItem) => workItem.name.toLowerCase() !== "default")}
           onChange={setTimeEntryForm}
           onClose={() => {

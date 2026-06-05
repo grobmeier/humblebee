@@ -11,6 +11,17 @@ type TimeEntryModalProps = {
   form: TimeEntryFormState;
   isSaving: boolean;
   language: DateLanguage;
+  t: {
+    end: string;
+    note: string;
+    project: string;
+    save: string;
+    saving: string;
+    start: string;
+    task: string;
+    title: string;
+    untilMidnight: string;
+  };
   onChange: (form: TimeEntryFormState) => void;
   onClose: () => void;
   onSubmit: FormEventHandler<HTMLFormElement>;
@@ -30,23 +41,23 @@ declare global {
   }
 }
 
-export function TimeEntryModal({ error, form, isSaving, language, onChange, onClose, onSubmit, workItems }: TimeEntryModalProps) {
+export function TimeEntryModal({ error, form, isSaving, language, t, onChange, onClose, onSubmit, workItems }: TimeEntryModalProps) {
   const projects = workItems.filter((workItem) => workItem.parentId == null);
   const tasks = workItems.filter((workItem) => workItem.parentId === form.projectId);
 
   return (
     <Modal
-      title="Zeiteintrag erfassen"
+      title={t.title}
       onClose={onClose}
       onSubmit={onSubmit}
       footer={
         <button className="primary-button modal-submit-button" type="submit" disabled={isSaving || !form.projectId || !form.taskId}>
-          {isSaving ? "Speichern..." : "Speichern"}
+          {isSaving ? t.saving : t.save}
         </button>
       }
     >
       {error ? <div className="errors alert alert-error">{error}</div> : null}
-      <FormRow label="Start" controlsClassName="tab-form-controls tab-form-controls--inline">
+      <FormRow label={t.start} controlsClassName="tab-form-controls tab-form-controls--inline">
         <DashboardDateInput
           className="tab-form-control tab-form-control--compact tab-form-control--small"
           language={language}
@@ -61,7 +72,7 @@ export function TimeEntryModal({ error, form, isSaving, language, onChange, onCl
       </FormRow>
 
       {!form.untilMidnight ? (
-        <FormRow label="Ende" controlsClassName="tab-form-controls tab-form-controls--inline">
+        <FormRow label={t.end} controlsClassName="tab-form-controls tab-form-controls--inline">
           <DashboardDateInput
             className="tab-form-control tab-form-control--compact tab-form-control--small"
             language={language}
@@ -90,11 +101,11 @@ export function TimeEntryModal({ error, form, isSaving, language, onChange, onCl
               })
             }
           />
-          Bis Mitternacht?
+          {t.untilMidnight}
         </label>
       </FormRow>
 
-      <FormRow label="Projekt">
+      <FormRow label={t.project}>
         <select
           className="tab-form-control"
           value={form.projectId}
@@ -113,7 +124,7 @@ export function TimeEntryModal({ error, form, isSaving, language, onChange, onCl
         </select>
       </FormRow>
 
-      <FormRow label="Taetigkeit">
+      <FormRow label={t.task}>
         <select
           className="tab-form-control"
           value={form.taskId}
@@ -129,7 +140,7 @@ export function TimeEntryModal({ error, form, isSaving, language, onChange, onCl
         </select>
       </FormRow>
 
-      <FormRow label="Notiz">
+      <FormRow label={t.note}>
         <textarea
           className="tab-form-control"
           rows={4}

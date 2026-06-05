@@ -31,6 +31,7 @@ type StopwatchSidebarProps = {
     createStopwatch: string;
     book: string;
     discardRunning: string;
+    selectWorkItem: string;
     start: string;
     stopStopwatch: string;
   };
@@ -65,7 +66,7 @@ export function StopwatchSidebar({
     <aside className="stopwatch-panel">
       <div className="stopwatch-create">
         <h2>{t.createStopwatch}</h2>
-        <select value={selectedValue} onChange={(event) => onSelectWorkItem(Number(event.target.value))} aria-label="Stoppuhr Work item">
+        <select value={selectedValue} onChange={(event) => onSelectWorkItem(Number(event.target.value))} aria-label={t.selectWorkItem}>
           <option value={0}></option>
           {groupedWorkItems.ungrouped.map((workItem) => (
             <option key={workItem.id} value={workItem.id}>

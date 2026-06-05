@@ -2,6 +2,16 @@ export type Language = "de" | "en";
 
 export const translations = {
   de: {
+    dashboardCalendar: {
+      addTime: "Zeit erfassen",
+      currentWeek: "Aktuelle Woche",
+      navigation: "Kalendernavigation",
+      nextDay: "Naechster Tag",
+      nextWeek: "Naechste Woche",
+      previousDay: "Vorheriger Tag",
+      previousWeek: "Vorherige Woche",
+      today: "Heute"
+    },
     nav: {
       dashboard: "Arbeitsplatz",
       projects: "Projekte",
@@ -112,11 +122,36 @@ export const translations = {
       createStopwatch: "Stoppuhr anlegen",
       discardRunning: "Stoppuhr verwerfen",
       discardRunningConfirm: "Die Stoppuhr wird geloescht und nicht gebucht. Fortfahren?",
+      selectWorkItem: "Stoppuhr-Aufgabe",
       start: "Starten",
       stopStopwatch: "Stoppen"
+    },
+    timeEntryModal: {
+      conflictMessage: "Die Stoppuhr ueberschneidet sich mit bereits gebuchter Zeit. Passe den Zeitraum an und speichere den Eintrag.",
+      end: "Ende",
+      note: "Notiz",
+      project: "Projekt",
+      save: "Speichern",
+      saving: "Speichern...",
+      selectProjectRequired: "Bitte waehle ein Projekt aus.",
+      selectTaskRequired: "Bitte waehle eine Taetigkeit aus.",
+      start: "Start",
+      task: "Taetigkeit",
+      title: "Zeiteintrag erfassen",
+      untilMidnight: "Bis Mitternacht?"
     }
   },
   en: {
+    dashboardCalendar: {
+      addTime: "Add time",
+      currentWeek: "Current week",
+      navigation: "Calendar navigation",
+      nextDay: "Next day",
+      nextWeek: "Next week",
+      previousDay: "Previous day",
+      previousWeek: "Previous week",
+      today: "Today"
+    },
     nav: {
       dashboard: "Dashboard",
       projects: "Projects",
@@ -227,11 +262,36 @@ export const translations = {
       createStopwatch: "Create stopwatch",
       discardRunning: "Discard stopwatch",
       discardRunningConfirm: "The stopwatch will be deleted and not booked. Continue?",
+      selectWorkItem: "Stopwatch task",
       start: "Start",
       stopStopwatch: "Stop"
+    },
+    timeEntryModal: {
+      conflictMessage: "The stopwatch overlaps with booked time. Adjust the time range and save the entry.",
+      end: "End",
+      note: "Note",
+      project: "Project",
+      save: "Save",
+      saving: "Saving...",
+      selectProjectRequired: "Select a project.",
+      selectTaskRequired: "Select a task.",
+      start: "Start",
+      task: "Task",
+      title: "Record time entry",
+      untilMidnight: "Until midnight?"
     }
   }
 } satisfies Record<Language, {
+  dashboardCalendar: {
+    addTime: string;
+    currentWeek: string;
+    navigation: string;
+    nextDay: string;
+    nextWeek: string;
+    previousDay: string;
+    previousWeek: string;
+    today: string;
+  };
   nav: {
     dashboard: string;
     projects: string;
@@ -342,8 +402,23 @@ export const translations = {
     book: string;
     discardRunning: string;
     discardRunningConfirm: string;
+    selectWorkItem: string;
     start: string;
     stopStopwatch: string;
+  };
+  timeEntryModal: {
+    conflictMessage: string;
+    end: string;
+    note: string;
+    project: string;
+    save: string;
+    saving: string;
+    selectProjectRequired: string;
+    selectTaskRequired: string;
+    start: string;
+    task: string;
+    title: string;
+    untilMidnight: string;
   };
 }>;
 
