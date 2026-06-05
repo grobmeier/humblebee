@@ -1,6 +1,9 @@
 package guiapp
 
 import (
+	"archive/zip"
+	"io"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -243,6 +246,383 @@ func TestCreateProjectUpdateProjectAndCreateTask(t *testing.T) {
 	}
 }
 
+func TestGetWorktimeByMonthReportShowsMonthlyTimeRows(t *testing.T) {
+	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
+
+	app := New()
+	if err := app.Init("user@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	project, err := app.CreateProject("Client")
+	if err != nil {
+		t.Fatal(err)
+	}
+	task, err := app.CreateTask(project.ID, "Research")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.CreateTimeEntry(CreateTimeEntryRequest{
+		WorkItemID:  task.ID,
+		StartDate:   "2026-06-04",
+		StartTime:   "09:00",
+		EndDate:     "2026-06-04",
+		EndTime:     "10:30",
+		Description: "Discovery",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	report, err := app.GetWorktimeByMonthReport(ReportRequest{
+		Mode:  "monthly",
+		Month: 6,
+		Year:  2026,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Empty {
+		t.Fatal("expected report with rows")
+	}
+	if report.TotalSeconds != 5400 || report.TotalDuration != "01:30" {
+		t.Fatalf("expected 01:30 total, got %d %q", report.TotalSeconds, report.TotalDuration)
+	}
+	if len(report.Rows) != 1 {
+		t.Fatalf("expected one row, got %#v", report.Rows)
+	}
+	row := report.Rows[0]
+	if row.ProjectName != "Client" || row.TaskName != "Research" || row.Description != "Discovery" {
+		t.Fatalf("unexpected row labels: %#v", row)
+	}
+	if row.Date != "2026-06-04" || row.StartTime != "09:00" || row.EndTime != "10:30" || row.Duration != "01:30" {
+		t.Fatalf("unexpected row times: %#v", row)
+	}
+}
+
+func TestGetWorktimeGroupedByProjectReportGroupsRowsAndTotals(t *testing.T) {
+	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
+
+	app := New()
+	if err := app.Init("user@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	client, err := app.CreateProject("Client")
+	if err != nil {
+		t.Fatal(err)
+	}
+	research, err := app.CreateTask(client.ID, "Research")
+	if err != nil {
+		t.Fatal(err)
+	}
+	internal, err := app.CreateProject("Internal")
+	if err != nil {
+		t.Fatal(err)
+	}
+	planning, err := app.CreateTask(internal.ID, "Planning")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.CreateTimeEntry(CreateTimeEntryRequest{
+		WorkItemID:  research.ID,
+		StartDate:   "2026-06-04",
+		StartTime:   "09:00",
+		EndDate:     "2026-06-04",
+		EndTime:     "10:00",
+		Description: "Discovery",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.CreateTimeEntry(CreateTimeEntryRequest{
+		WorkItemID: planning.ID,
+		StartDate:  "2026-06-04",
+		StartTime:  "10:30",
+		EndDate:    "2026-06-04",
+		EndTime:    "11:00",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	report, err := app.GetWorktimeGroupedByProjectReport(ReportRequest{
+		Mode:  "monthly",
+		Month: 6,
+		Year:  2026,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Empty {
+		t.Fatal("expected grouped report with rows")
+	}
+	if len(report.Groups) != 2 {
+		t.Fatalf("expected two project groups, got %#v", report.Groups)
+	}
+	if report.Groups[0].ProjectName != "Client" || report.Groups[0].TotalDuration != "01:00" || len(report.Groups[0].Rows) != 1 {
+		t.Fatalf("unexpected first group: %#v", report.Groups[0])
+	}
+	if report.Groups[1].ProjectName != "Internal" || report.Groups[1].TotalDuration != "00:30" || len(report.Groups[1].Rows) != 1 {
+		t.Fatalf("unexpected second group: %#v", report.Groups[1])
+	}
+}
+
+func TestGetWorktimeTaskDetailsReportAggregatesSelectedProjectTasks(t *testing.T) {
+	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
+
+	app := New()
+	if err := app.Init("user@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	project, err := app.CreateProject("Client")
+	if err != nil {
+		t.Fatal(err)
+	}
+	research, err := app.CreateTask(project.ID, "Research")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.CreateTimeEntry(CreateTimeEntryRequest{
+		WorkItemID: research.ID,
+		StartDate:  "2026-06-04",
+		StartTime:  "09:00",
+		EndDate:    "2026-06-04",
+		EndTime:    "10:00",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.CreateTimeEntry(CreateTimeEntryRequest{
+		WorkItemID: research.ID,
+		StartDate:  "2026-06-04",
+		StartTime:  "10:30",
+		EndDate:    "2026-06-04",
+		EndTime:    "11:00",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	report, err := app.GetWorktimeTaskDetailsReport(ReportRequest{
+		Mode:      "monthly",
+		Month:     6,
+		Year:      2026,
+		ProjectID: project.ID,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Empty {
+		t.Fatal("expected task detail rows")
+	}
+	if report.TotalSeconds != 5400 || report.TotalDuration != "01:30" {
+		t.Fatalf("expected 01:30 total, got %d %q", report.TotalSeconds, report.TotalDuration)
+	}
+	if len(report.Rows) != 1 {
+		t.Fatalf("expected one task aggregate row, got %#v", report.Rows)
+	}
+	row := report.Rows[0]
+	if row.ProjectName != "Client" || row.TaskName != "Research" || row.Duration != "01:30" {
+		t.Fatalf("unexpected task aggregate row: %#v", row)
+	}
+}
+
+func TestGetWorktimeTaskDetailsReportDefaultsToFirstReportableProject(t *testing.T) {
+	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
+
+	app := New()
+	if err := app.Init("user@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	alpha, err := app.CreateProject("Alpha")
+	if err != nil {
+		t.Fatal(err)
+	}
+	alphaTask, err := app.CreateTask(alpha.ID, "Discovery")
+	if err != nil {
+		t.Fatal(err)
+	}
+	zeta, err := app.CreateProject("Zeta")
+	if err != nil {
+		t.Fatal(err)
+	}
+	zetaTask, err := app.CreateTask(zeta.ID, "Maintenance")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.CreateTimeEntry(CreateTimeEntryRequest{
+		WorkItemID: zetaTask.ID,
+		StartDate:  "2026-06-04",
+		StartTime:  "09:00",
+		EndDate:    "2026-06-04",
+		EndTime:    "10:00",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.CreateTimeEntry(CreateTimeEntryRequest{
+		WorkItemID: alphaTask.ID,
+		StartDate:  "2026-06-04",
+		StartTime:  "10:30",
+		EndDate:    "2026-06-04",
+		EndTime:    "11:00",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	report, err := app.GetWorktimeTaskDetailsReport(ReportRequest{
+		Mode:  "monthly",
+		Month: 6,
+		Year:  2026,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(report.Rows) != 1 {
+		t.Fatalf("expected only first reportable project, got %#v", report.Rows)
+	}
+	if report.Rows[0].ProjectName != "Alpha" || report.Rows[0].Duration != "00:30" {
+		t.Fatalf("expected Alpha default project, got %#v", report.Rows[0])
+	}
+}
+
+func TestGetTimesheetReportShowsMonthlyProjectTotals(t *testing.T) {
+	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
+
+	app := New()
+	if err := app.Init("user@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	client, err := app.CreateProject("Client")
+	if err != nil {
+		t.Fatal(err)
+	}
+	research, err := app.CreateTask(client.ID, "Research")
+	if err != nil {
+		t.Fatal(err)
+	}
+	internal, err := app.CreateProject("Internal")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.CreateTimeEntry(CreateTimeEntryRequest{
+		WorkItemID: research.ID,
+		StartDate:  "2026-06-04",
+		StartTime:  "09:00",
+		EndDate:    "2026-06-04",
+		EndTime:    "10:00",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.CreateTimeEntry(CreateTimeEntryRequest{
+		WorkItemID: internal.ID,
+		StartDate:  "2026-06-04",
+		StartTime:  "10:30",
+		EndDate:    "2026-06-04",
+		EndTime:    "12:00",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	report, err := app.GetTimesheetReport(ReportRequest{
+		Mode:  "monthly",
+		Month: 6,
+		Year:  2026,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Empty {
+		t.Fatal("expected timesheet rows")
+	}
+	if report.TotalSeconds != 9000 || report.TotalDuration != "02:30" {
+		t.Fatalf("expected 02:30 total, got %d %q", report.TotalSeconds, report.TotalDuration)
+	}
+	if len(report.ProjectRows) != 2 {
+		t.Fatalf("expected two project totals, got %#v", report.ProjectRows)
+	}
+	if report.ProjectRows[0].ProjectName != "Client" || report.ProjectRows[0].Duration != "01:00" {
+		t.Fatalf("unexpected first project total: %#v", report.ProjectRows[0])
+	}
+	if report.ProjectRows[1].ProjectName != "Internal" || report.ProjectRows[1].Duration != "01:30" {
+		t.Fatalf("unexpected second project total: %#v", report.ProjectRows[1])
+	}
+}
+
+func TestGetTimesheetReportSplitsDateRangeTotalsByDay(t *testing.T) {
+	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
+
+	app := New()
+	if err := app.Init("user@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	project, err := app.CreateProject("Client")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.CreateTimeEntry(CreateTimeEntryRequest{
+		WorkItemID: project.ID,
+		StartDate:  "2026-06-04",
+		StartTime:  "23:00",
+		EndDate:    "2026-06-05",
+		EndTime:    "01:00",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	report, err := app.GetTimesheetReport(ReportRequest{
+		Mode:      "daily",
+		StartDate: "2026-06-04",
+		EndDate:   "2026-06-05",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(report.DailyRows) != 2 {
+		t.Fatalf("expected two daily rows, got %#v", report.DailyRows)
+	}
+	if report.DailyRows[0].Date != "2026-06-04" || report.DailyRows[0].ProjectDuration != "01:00" {
+		t.Fatalf("unexpected first daily row: %#v", report.DailyRows[0])
+	}
+	if report.DailyRows[1].Date != "2026-06-05" || report.DailyRows[1].ProjectDuration != "01:00" {
+		t.Fatalf("unexpected second daily row: %#v", report.DailyRows[1])
+	}
+	if report.TotalDuration != "02:00" {
+		t.Fatalf("expected 02:00 total, got %q", report.TotalDuration)
+	}
+}
+
+func TestExportWorktimeByMonthReportWritesExcelFile(t *testing.T) {
+	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
+
+	app := New()
+	if err := app.Init("user@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	project, err := app.CreateProject("Client")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.CreateTimeEntry(CreateTimeEntryRequest{
+		WorkItemID: project.ID,
+		StartDate:  "2026-06-04",
+		StartTime:  "09:00",
+		EndDate:    "2026-06-04",
+		EndTime:    "10:00",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	path, err := app.ExportWorktimeByMonthReport(ReportRequest{
+		Mode:  "monthly",
+		Month: 6,
+		Year:  2026,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if filepath.Ext(path) != ".xlsx" {
+		t.Fatalf("expected .xlsx path, got %q", path)
+	}
+	worksheet := readXLSXWorksheet(t, path)
+	if !strings.Contains(worksheet, "Client") || !strings.Contains(worksheet, "01:00") {
+		t.Fatalf("expected worksheet to contain report data, got %s", worksheet)
+	}
+}
+
 func TestCreateTaskRejectsTaskParent(t *testing.T) {
 	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
 
@@ -470,4 +850,30 @@ func runningStopwatchStart(t *testing.T, app *App) int64 {
 		t.Fatal("expected running stopwatch")
 	}
 	return running.StartTime
+}
+
+func readXLSXWorksheet(t *testing.T, path string) string {
+	t.Helper()
+	reader, err := zip.OpenReader(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reader.Close()
+	for _, file := range reader.File {
+		if file.Name != "xl/worksheets/sheet1.xml" {
+			continue
+		}
+		rc, err := file.Open()
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer rc.Close()
+		data, err := io.ReadAll(rc)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(data)
+	}
+	t.Fatalf("worksheet not found in %s", path)
+	return ""
 }

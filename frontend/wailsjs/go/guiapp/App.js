@@ -30,12 +30,44 @@ export function DiscardStopwatch(arg1) {
   return window['go']['guiapp']['App']['DiscardStopwatch'](arg1);
 }
 
+export function ExportTimesheetReport(arg1) {
+  return window['go']['guiapp']['App']['ExportTimesheetReport'](arg1);
+}
+
+export function ExportWorktimeByMonthReport(arg1) {
+  return window['go']['guiapp']['App']['ExportWorktimeByMonthReport'](arg1);
+}
+
+export function ExportWorktimeGroupedByProjectReport(arg1) {
+  return window['go']['guiapp']['App']['ExportWorktimeGroupedByProjectReport'](arg1);
+}
+
+export function ExportWorktimeTaskDetailsReport(arg1) {
+  return window['go']['guiapp']['App']['ExportWorktimeTaskDetailsReport'](arg1);
+}
+
 export function GetDashboard() {
   return window['go']['guiapp']['App']['GetDashboard']();
 }
 
 export function GetTimeDay(arg1) {
   return window['go']['guiapp']['App']['GetTimeDay'](arg1);
+}
+
+export function GetTimesheetReport(arg1) {
+  return window['go']['guiapp']['App']['GetTimesheetReport'](arg1);
+}
+
+export function GetWorktimeByMonthReport(arg1) {
+  return window['go']['guiapp']['App']['GetWorktimeByMonthReport'](arg1);
+}
+
+export function GetWorktimeGroupedByProjectReport(arg1) {
+  return window['go']['guiapp']['App']['GetWorktimeGroupedByProjectReport'](arg1);
+}
+
+export function GetWorktimeTaskDetailsReport(arg1) {
+  return window['go']['guiapp']['App']['GetWorktimeTaskDetailsReport'](arg1);
 }
 
 export function Init(arg1) {

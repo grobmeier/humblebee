@@ -16,9 +16,25 @@ export function DiscardRunningStopwatch():Promise<void>;
 
 export function DiscardStopwatch(arg1:number):Promise<void>;
 
+export function ExportTimesheetReport(arg1:guiapp.ReportRequest):Promise<string>;
+
+export function ExportWorktimeByMonthReport(arg1:guiapp.ReportRequest):Promise<string>;
+
+export function ExportWorktimeGroupedByProjectReport(arg1:guiapp.ReportRequest):Promise<string>;
+
+export function ExportWorktimeTaskDetailsReport(arg1:guiapp.ReportRequest):Promise<string>;
+
 export function GetDashboard():Promise<guiapp.Dashboard>;
 
 export function GetTimeDay(arg1:string):Promise<guiapp.TimeDay>;
+
+export function GetTimesheetReport(arg1:guiapp.ReportRequest):Promise<guiapp.TimesheetReport>;
+
+export function GetWorktimeByMonthReport(arg1:guiapp.ReportRequest):Promise<guiapp.WorktimeByMonthReport>;
+
+export function GetWorktimeGroupedByProjectReport(arg1:guiapp.ReportRequest):Promise<guiapp.WorktimeGroupedByProjectReport>;
+
+export function GetWorktimeTaskDetailsReport(arg1:guiapp.ReportRequest):Promise<guiapp.WorktimeTaskDetailsReport>;
 
 export function Init(arg1:string):Promise<void>;
 

@@ -134,7 +134,7 @@ type DashboardDateInputProps = {
   onChange: (value: string) => void;
 };
 
-function DashboardDateInput({ className, language, value, onChange }: DashboardDateInputProps) {
+export function DashboardDateInput({ className, language, value, onChange }: DashboardDateInputProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const instanceRef = useRef<FlatpickrInstance | null>(null);
   const onChangeRef = useRef(onChange);

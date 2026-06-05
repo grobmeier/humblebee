@@ -31,6 +31,9 @@ import { TimeEntryModal } from "./dashboard/TimeEntryModal";
 import type { TimeEntryFormState } from "./dashboard/timeEntryTypes";
 import { type Language, translations } from "./dashboard/translations";
 import { ProjectsPage } from "./projects/ProjectsPage";
+import { ReportsPage } from "./reports/ReportsPage";
+import { reportSlugFromHash } from "./reports/reportUtils";
+import type { ReportSlug } from "./reports/reportTypes";
 
 type Dashboard = {
   initialized: boolean;
@@ -115,6 +118,7 @@ export default function App() {
   const [confirmationStopwatchId, setConfirmationStopwatchId] = useState<number | null>(null);
   const [language, setLanguage] = useState<Language>("de");
   const [activePage, setActivePage] = useState<AppPage>(() => pageFromHash(window.location.hash));
+  const [activeReport, setActiveReport] = useState<ReportSlug>(() => reportSlugFromHash(window.location.hash));
   const [selectedProjectPageProjectId, setSelectedProjectPageProjectId] = useState<number>(0);
   const t = translations[language];
 
@@ -125,6 +129,7 @@ export default function App() {
   useEffect(() => {
     function syncPageFromHash() {
       setActivePage(pageFromHash(window.location.hash));
+      setActiveReport(reportSlugFromHash(window.location.hash));
     }
 
     window.addEventListener("hashchange", syncPageFromHash);
@@ -624,7 +629,7 @@ export default function App() {
             onUpdateProject={onUpdateProject}
           />
         ) : null}
-        {activePage === "reports" ? <PlaceholderPage page="reports" text={t.placeholders.reports} /> : null}
+        {activePage === "reports" ? <ReportsPage activeReport={activeReport} language={language} workItems={projectWorkItems} /> : null}
       </div>
       {isTimeEntryModalOpen ? (
         <TimeEntryModal
@@ -647,7 +652,7 @@ export default function App() {
 }
 
 function pageFromHash(hash: string): AppPage {
-  if (hash === "#reports") {
+  if (hash === "#reports" || hash.startsWith("#reports/")) {
     return "reports";
   }
   if (hash === "#projects") {

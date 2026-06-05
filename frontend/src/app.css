@@ -370,8 +370,17 @@ code {
   grid-template-columns: 300px minmax(0, 1fr);
 }
 
+.reports-page {
+  display: grid;
+  align-items: start;
+  gap: 34px;
+  grid-template-columns: 300px minmax(0, 1fr);
+}
+
 .projects-list-panel,
-.project-detail-panel {
+.project-detail-panel,
+.reports-list-panel,
+.report-detail-panel {
   min-width: 0;
 }
 
@@ -410,6 +419,103 @@ code {
 
 .project-detail-actions .primary-button {
   margin-top: 0;
+}
+
+.report-filter-panel {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.report-filter-tabs {
+  display: inline-flex;
+  width: fit-content;
+  border: 1px solid #c6c6c6;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.report-filter-tabs button {
+  min-height: 32px;
+  padding: 6px 12px;
+  border: 0;
+  border-right: 1px solid #c6c6c6;
+  background: #fff;
+  color: #555;
+  font-weight: 700;
+}
+
+.report-filter-tabs button:last-child {
+  border-right: 0;
+}
+
+.report-filter-tabs button.active {
+  background: #0a85c5;
+  color: #fff;
+}
+
+.report-filter-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.report-filter-controls .secondary-button {
+  min-height: 34px;
+}
+
+.report-filter-separator {
+  color: #777;
+}
+
+.report-export-path {
+  margin: 0 0 12px;
+  padding: 9px 10px;
+  border: 1px solid #cfe1cc;
+  border-radius: 4px;
+  background: #f1f8ef;
+  color: #365b32;
+  font-size: 13px;
+}
+
+.report-export-path a {
+  color: #155d8b;
+}
+
+.report-section {
+  margin-top: 18px;
+}
+
+.report-section h2 {
+  margin: 0 0 8px;
+  color: #333;
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #333;
+  font-size: 14px;
+}
+
+.report-table th,
+.report-table td {
+  padding: 8px 9px;
+  border: 1px solid #ddd;
+  text-align: left;
+  vertical-align: top;
+}
+
+.report-table th {
+  background: #f5f5f5;
+  font-weight: 800;
+}
+
+.report-table tr:nth-child(even) td {
+  background: #fafafa;
 }
 
 .projects-list,
@@ -1145,6 +1251,7 @@ code {
   .stats-row,
   .dashboard-grid,
   .projects-page,
+  .reports-page,
   .roadmap-grid {
     grid-template-columns: 1fr;
   }
@@ -1160,6 +1267,38 @@ code {
 
   .week-calendar {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media print {
+  .hide-print,
+  .topbar,
+  .reports-list-panel,
+  .report-filter-panel,
+  .report-export-path {
+    display: none !important;
+  }
+
+  .content {
+    width: 100%;
+    padding: 0;
+  }
+
+  .reports-page {
+    display: block;
+  }
+
+  .report-table {
+    page-break-inside: auto;
+    font-size: 11px;
+  }
+
+  .report-table tr {
+    page-break-inside: avoid;
+  }
+
+  .report-section {
+    break-inside: avoid;
   }
 }
 

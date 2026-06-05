@@ -102,6 +102,90 @@ type TimeDay struct {
 	BreakSeconds   int64       `json:"breakSeconds"`
 }
 
+type ReportRequest struct {
+	Mode      string `json:"mode"`
+	Month     int    `json:"month"`
+	Year      int    `json:"year"`
+	StartDate string `json:"startDate"`
+	EndDate   string `json:"endDate"`
+	ProjectID int64  `json:"projectId"`
+}
+
+type WorktimeByMonthReport struct {
+	Empty         bool                `json:"empty"`
+	Rows          []WorktimeReportRow `json:"rows"`
+	TotalSeconds  int64               `json:"totalSeconds"`
+	TotalDuration string              `json:"totalDuration"`
+}
+
+type WorktimeGroupedByProjectReport struct {
+	Empty         bool                   `json:"empty"`
+	Groups        []WorktimeProjectGroup `json:"groups"`
+	TotalSeconds  int64                  `json:"totalSeconds"`
+	TotalDuration string                 `json:"totalDuration"`
+}
+
+type WorktimeProjectGroup struct {
+	ProjectID     int64               `json:"projectId"`
+	ProjectName   string              `json:"projectName"`
+	Rows          []WorktimeReportRow `json:"rows"`
+	TotalSeconds  int64               `json:"totalSeconds"`
+	TotalDuration string              `json:"totalDuration"`
+}
+
+type WorktimeTaskDetailsReport struct {
+	Empty         bool                    `json:"empty"`
+	Rows          []WorktimeTaskDetailRow `json:"rows"`
+	TotalSeconds  int64                   `json:"totalSeconds"`
+	TotalDuration string                  `json:"totalDuration"`
+}
+
+type WorktimeTaskDetailRow struct {
+	ProjectID       int64  `json:"projectId"`
+	ProjectName     string `json:"projectName"`
+	TaskID          int64  `json:"taskId"`
+	TaskName        string `json:"taskName"`
+	DurationSeconds int64  `json:"durationSeconds"`
+	Duration        string `json:"duration"`
+}
+
+type TimesheetReport struct {
+	Empty         bool                  `json:"empty"`
+	UserName      string                `json:"userName"`
+	ProjectRows   []TimesheetProjectRow `json:"projectRows"`
+	DailyRows     []TimesheetDailyRow   `json:"dailyRows"`
+	TotalSeconds  int64                 `json:"totalSeconds"`
+	TotalDuration string                `json:"totalDuration"`
+}
+
+type TimesheetProjectRow struct {
+	ProjectID       int64  `json:"projectId"`
+	ProjectName     string `json:"projectName"`
+	DurationSeconds int64  `json:"durationSeconds"`
+	Duration        string `json:"duration"`
+}
+
+type TimesheetDailyRow struct {
+	Date            string `json:"date"`
+	TotalSeconds    int64  `json:"totalSeconds"`
+	TotalDuration   string `json:"totalDuration"`
+	ProjectSeconds  int64  `json:"projectSeconds"`
+	ProjectDuration string `json:"projectDuration"`
+}
+
+type WorktimeReportRow struct {
+	ProjectID       int64  `json:"projectId"`
+	ProjectName     string `json:"projectName"`
+	TaskID          int64  `json:"taskId"`
+	TaskName        string `json:"taskName"`
+	Description     string `json:"description"`
+	Date            string `json:"date"`
+	StartTime       string `json:"startTime"`
+	EndTime         string `json:"endTime"`
+	DurationSeconds int64  `json:"durationSeconds"`
+	Duration        string `json:"duration"`
+}
+
 const stopwatchOverlapErrorCode = "HUMBLEBEE_STOPWATCH_OVERLAP"
 
 func (a *App) GetDashboard() (*Dashboard, error) {
@@ -484,6 +568,281 @@ func (a *App) GetTimeDay(date string) (*TimeDay, error) {
 	return out, nil
 }
 
+func (a *App) GetWorktimeByMonthReport(req ReportRequest) (*WorktimeByMonthReport, error) {
+	database, _, err := a.openDB()
+	if err != nil {
+		return nil, err
+	}
+	defer database.Close()
+	if err := a.requireInitialized(database); err != nil {
+		return nil, err
+	}
+	personID, err := a.defaultPersonID(database)
+	if err != nil {
+		return nil, err
+	}
+
+	window, err := reportWindow(req, time.Local)
+	if err != nil {
+		return nil, err
+	}
+	entriesRepo := repo.NewTimeEntryRepo(database)
+	entries, err := entriesRepo.ListOverlapping(personID, window.Start.UTC().Unix(), window.End.UTC().Unix())
+	if err != nil {
+		return nil, err
+	}
+	itemsRepo := repo.NewWorkItemRepo(database)
+	items, err := itemsRepo.ListAll(personID)
+	if err != nil {
+		return nil, err
+	}
+	itemByID := make(map[int64]model.WorkItem, len(items))
+	for _, item := range items {
+		itemByID[item.ID] = item
+	}
+
+	report := &WorktimeByMonthReport{}
+	for _, entry := range entries {
+		if entry.EndTime == nil {
+			continue
+		}
+		seconds := timeutil.OverlapSeconds(entry.StartTime, *entry.EndTime, window)
+		if seconds <= 0 {
+			continue
+		}
+		row := worktimeReportRow(entry, seconds, itemByID, time.Local)
+		report.Rows = append(report.Rows, row)
+		report.TotalSeconds += seconds
+	}
+	sort.Slice(report.Rows, func(i, j int) bool {
+		if report.Rows[i].Date != report.Rows[j].Date {
+			return report.Rows[i].Date < report.Rows[j].Date
+		}
+		return report.Rows[i].StartTime < report.Rows[j].StartTime
+	})
+	report.Empty = len(report.Rows) == 0
+	report.TotalDuration = formatReportDuration(report.TotalSeconds)
+	return report, nil
+}
+
+func (a *App) GetWorktimeGroupedByProjectReport(req ReportRequest) (*WorktimeGroupedByProjectReport, error) {
+	details, err := a.GetWorktimeByMonthReport(req)
+	if err != nil {
+		return nil, err
+	}
+	report := &WorktimeGroupedByProjectReport{
+		Empty:         details.Empty,
+		TotalSeconds:  details.TotalSeconds,
+		TotalDuration: details.TotalDuration,
+	}
+	groupsByProject := map[int64]*WorktimeProjectGroup{}
+	var projectOrder []int64
+	for _, row := range details.Rows {
+		group := groupsByProject[row.ProjectID]
+		if group == nil {
+			group = &WorktimeProjectGroup{
+				ProjectID:   row.ProjectID,
+				ProjectName: row.ProjectName,
+			}
+			groupsByProject[row.ProjectID] = group
+			projectOrder = append(projectOrder, row.ProjectID)
+		}
+		group.Rows = append(group.Rows, row)
+		group.TotalSeconds += row.DurationSeconds
+		group.TotalDuration = formatReportDuration(group.TotalSeconds)
+	}
+	sort.Slice(projectOrder, func(i, j int) bool {
+		return strings.ToLower(groupsByProject[projectOrder[i]].ProjectName) < strings.ToLower(groupsByProject[projectOrder[j]].ProjectName)
+	})
+	for _, projectID := range projectOrder {
+		report.Groups = append(report.Groups, *groupsByProject[projectID])
+	}
+	return report, nil
+}
+
+func (a *App) GetWorktimeTaskDetailsReport(req ReportRequest) (*WorktimeTaskDetailsReport, error) {
+	details, err := a.GetWorktimeByMonthReport(req)
+	if err != nil {
+		return nil, err
+	}
+	report := &WorktimeTaskDetailsReport{}
+	projectID := req.ProjectID
+	if projectID == 0 {
+		projectID = firstReportableProjectID(details.Rows)
+	}
+	rowsByTask := map[int64]*WorktimeTaskDetailRow{}
+	var taskOrder []int64
+	for _, row := range details.Rows {
+		if projectID != 0 && row.ProjectID != projectID {
+			continue
+		}
+		taskID := row.TaskID
+		if taskID == 0 {
+			taskID = row.ProjectID
+		}
+		taskRow := rowsByTask[taskID]
+		if taskRow == nil {
+			taskName := row.TaskName
+			if taskName == "" {
+				taskName = row.ProjectName
+			}
+			taskRow = &WorktimeTaskDetailRow{
+				ProjectID:   row.ProjectID,
+				ProjectName: row.ProjectName,
+				TaskID:      taskID,
+				TaskName:    taskName,
+			}
+			rowsByTask[taskID] = taskRow
+			taskOrder = append(taskOrder, taskID)
+		}
+		taskRow.DurationSeconds += row.DurationSeconds
+		taskRow.Duration = formatReportDuration(taskRow.DurationSeconds)
+		report.TotalSeconds += row.DurationSeconds
+	}
+	sort.Slice(taskOrder, func(i, j int) bool {
+		left := rowsByTask[taskOrder[i]]
+		right := rowsByTask[taskOrder[j]]
+		if strings.ToLower(left.ProjectName) != strings.ToLower(right.ProjectName) {
+			return strings.ToLower(left.ProjectName) < strings.ToLower(right.ProjectName)
+		}
+		return strings.ToLower(left.TaskName) < strings.ToLower(right.TaskName)
+	})
+	for _, taskID := range taskOrder {
+		report.Rows = append(report.Rows, *rowsByTask[taskID])
+	}
+	report.Empty = len(report.Rows) == 0
+	report.TotalDuration = formatReportDuration(report.TotalSeconds)
+	return report, nil
+}
+
+func firstReportableProjectID(rows []WorktimeReportRow) int64 {
+	if len(rows) == 0 {
+		return 0
+	}
+	projects := map[int64]string{}
+	var ids []int64
+	for _, row := range rows {
+		if _, exists := projects[row.ProjectID]; exists {
+			continue
+		}
+		projects[row.ProjectID] = row.ProjectName
+		ids = append(ids, row.ProjectID)
+	}
+	sort.Slice(ids, func(i, j int) bool {
+		return strings.ToLower(projects[ids[i]]) < strings.ToLower(projects[ids[j]])
+	})
+	return ids[0]
+}
+
+func (a *App) GetTimesheetReport(req ReportRequest) (*TimesheetReport, error) {
+	database, _, err := a.openDB()
+	if err != nil {
+		return nil, err
+	}
+	defer database.Close()
+	if err := a.requireInitialized(database); err != nil {
+		return nil, err
+	}
+	personRepo := repo.NewPersonRepo(database)
+	person, err := personRepo.GetDefault()
+	if err != nil {
+		return nil, err
+	}
+	userName := ""
+	if person != nil {
+		userName = person.Email
+	}
+
+	details, err := a.GetWorktimeByMonthReport(req)
+	if err != nil {
+		return nil, err
+	}
+	report := &TimesheetReport{
+		Empty:         details.Empty,
+		UserName:      userName,
+		TotalSeconds:  details.TotalSeconds,
+		TotalDuration: details.TotalDuration,
+	}
+	if req.Mode == "daily" && person != nil {
+		dailyRows, err := timesheetDailyRows(database, person.ID, req, time.Local)
+		if err != nil {
+			return nil, err
+		}
+		report.DailyRows = dailyRows
+		return report, nil
+	}
+	rowsByProject := map[int64]*TimesheetProjectRow{}
+	var projectOrder []int64
+	for _, row := range details.Rows {
+		projectRow := rowsByProject[row.ProjectID]
+		if projectRow == nil {
+			projectRow = &TimesheetProjectRow{
+				ProjectID:   row.ProjectID,
+				ProjectName: row.ProjectName,
+			}
+			rowsByProject[row.ProjectID] = projectRow
+			projectOrder = append(projectOrder, row.ProjectID)
+		}
+		projectRow.DurationSeconds += row.DurationSeconds
+		projectRow.Duration = formatReportDuration(projectRow.DurationSeconds)
+	}
+	sort.Slice(projectOrder, func(i, j int) bool {
+		return strings.ToLower(rowsByProject[projectOrder[i]].ProjectName) < strings.ToLower(rowsByProject[projectOrder[j]].ProjectName)
+	})
+	for _, projectID := range projectOrder {
+		report.ProjectRows = append(report.ProjectRows, *rowsByProject[projectID])
+	}
+	return report, nil
+}
+
+func timesheetDailyRows(database *sql.DB, personID int64, req ReportRequest, loc *time.Location) ([]TimesheetDailyRow, error) {
+	window, err := reportWindow(req, loc)
+	if err != nil {
+		return nil, err
+	}
+	entries, err := repo.NewTimeEntryRepo(database).ListOverlapping(personID, window.Start.UTC().Unix(), window.End.UTC().Unix())
+	if err != nil {
+		return nil, err
+	}
+	secondsByDay := map[string]int64{}
+	for _, entry := range entries {
+		if entry.EndTime == nil {
+			continue
+		}
+		entryLoc := timeutil.LocationForEntry(entry.TZName, entry.TZOffsetMin, loc)
+		for day, seconds := range timeutil.SplitByLocalDay(entry.StartTime, *entry.EndTime, entryLoc) {
+			if seconds <= 0 {
+				continue
+			}
+			dayStart, err := time.ParseInLocation("2006-01-02", day, entryLoc)
+			if err != nil {
+				continue
+			}
+			if dayStart.Before(window.Start.In(entryLoc)) || !dayStart.Before(window.End.In(entryLoc)) {
+				continue
+			}
+			secondsByDay[day] += seconds
+		}
+	}
+	days := make([]string, 0, len(secondsByDay))
+	for day := range secondsByDay {
+		days = append(days, day)
+	}
+	sort.Strings(days)
+	rows := make([]TimesheetDailyRow, 0, len(days))
+	for _, day := range days {
+		seconds := secondsByDay[day]
+		rows = append(rows, TimesheetDailyRow{
+			Date:            day,
+			TotalSeconds:    seconds,
+			TotalDuration:   formatReportDuration(seconds),
+			ProjectSeconds:  seconds,
+			ProjectDuration: formatReportDuration(seconds),
+		})
+	}
+	return rows, nil
+}
+
 func (a *App) Init(email string) error {
 	email = strings.TrimSpace(email)
 	database, _, err := a.openDB()
@@ -509,6 +868,24 @@ func (a *App) Init(email string) error {
 		Now:             time.Now(),
 	})
 	return err
+}
+
+func reportWindow(req ReportRequest, loc *time.Location) (timeutil.Window, error) {
+	if req.Mode == "daily" {
+		start, err := time.ParseInLocation("2006-01-02", req.StartDate, loc)
+		if err != nil {
+			return timeutil.Window{}, errors.New("invalid report start date")
+		}
+		end, err := time.ParseInLocation("2006-01-02", req.EndDate, loc)
+		if err != nil {
+			return timeutil.Window{}, errors.New("invalid report end date")
+		}
+		return timeutil.Window{Start: start, End: end.AddDate(0, 0, 1)}, nil
+	}
+	if req.Year == 0 || req.Month < 1 || req.Month > 12 {
+		return timeutil.Window{}, errors.New("invalid report month")
+	}
+	return timeutil.MonthWindow(req.Year, time.Month(req.Month), loc), nil
 }
 
 func parseManualEntryTimes(req CreateTimeEntryRequest) (time.Time, time.Time, error) {
@@ -538,6 +915,56 @@ func parseLocalDateTime(dateValue, timeValue string) (time.Time, error) {
 		return day.AddDate(0, 0, 1), nil
 	}
 	return time.ParseInLocation("2006-01-02 15:04", dateValue+" "+timeValue, time.Local)
+}
+
+func worktimeReportRow(entry model.TimeEntry, seconds int64, itemByID map[int64]model.WorkItem, loc *time.Location) WorktimeReportRow {
+	start := time.Unix(entry.StartTime, 0).In(loc)
+	end := time.Unix(*entry.EndTime, 0).In(loc)
+	description := ""
+	if entry.Description != nil {
+		description = *entry.Description
+	}
+	projectID := int64(0)
+	projectName := "Default"
+	taskID := int64(0)
+	taskName := ""
+	if entry.WorkItemID != nil {
+		item, ok := itemByID[*entry.WorkItemID]
+		if ok {
+			if item.ParentID == nil {
+				projectID = item.ID
+				projectName = item.Name
+			} else {
+				taskID = item.ID
+				taskName = item.Name
+				if parent, ok := itemByID[*item.ParentID]; ok {
+					projectID = parent.ID
+					projectName = parent.Name
+				}
+			}
+		}
+	}
+	return WorktimeReportRow{
+		ProjectID:       projectID,
+		ProjectName:     projectName,
+		TaskID:          taskID,
+		TaskName:        taskName,
+		Description:     description,
+		Date:            start.Format("2006-01-02"),
+		StartTime:       start.Format("15:04"),
+		EndTime:         end.Format("15:04"),
+		DurationSeconds: seconds,
+		Duration:        formatReportDuration(seconds),
+	}
+}
+
+func formatReportDuration(seconds int64) string {
+	if seconds < 0 {
+		seconds = 0
+	}
+	hours := seconds / 3600
+	minutes := (seconds % 3600) / 60
+	return fmt.Sprintf("%02d:%02d", hours, minutes)
 }
 
 func timeEntryDTO(entry model.TimeEntry, loc *time.Location) *TimeEntry {

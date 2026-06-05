@@ -78,6 +78,28 @@ export namespace guiapp {
 		    return a;
 		}
 	}
+	export class ReportRequest {
+	    mode: string;
+	    month: number;
+	    year: number;
+	    startDate: string;
+	    endDate: string;
+	    projectId: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ReportRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.mode = source["mode"];
+	        this.month = source["month"];
+	        this.year = source["year"];
+	        this.startDate = source["startDate"];
+	        this.endDate = source["endDate"];
+	        this.projectId = source["projectId"];
+	    }
+	}
 	
 	export class StopResult {
 	    workItemName: string;
@@ -194,6 +216,84 @@ export namespace guiapp {
 		}
 	}
 	
+	export class TimesheetDailyRow {
+	    date: string;
+	    totalSeconds: number;
+	    totalDuration: string;
+	    projectSeconds: number;
+	    projectDuration: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TimesheetDailyRow(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.date = source["date"];
+	        this.totalSeconds = source["totalSeconds"];
+	        this.totalDuration = source["totalDuration"];
+	        this.projectSeconds = source["projectSeconds"];
+	        this.projectDuration = source["projectDuration"];
+	    }
+	}
+	export class TimesheetProjectRow {
+	    projectId: number;
+	    projectName: string;
+	    durationSeconds: number;
+	    duration: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TimesheetProjectRow(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.projectId = source["projectId"];
+	        this.projectName = source["projectName"];
+	        this.durationSeconds = source["durationSeconds"];
+	        this.duration = source["duration"];
+	    }
+	}
+	export class TimesheetReport {
+	    empty: boolean;
+	    userName: string;
+	    projectRows: TimesheetProjectRow[];
+	    dailyRows: TimesheetDailyRow[];
+	    totalSeconds: number;
+	    totalDuration: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new TimesheetReport(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.empty = source["empty"];
+	        this.userName = source["userName"];
+	        this.projectRows = this.convertValues(source["projectRows"], TimesheetProjectRow);
+	        this.dailyRows = this.convertValues(source["dailyRows"], TimesheetDailyRow);
+	        this.totalSeconds = source["totalSeconds"];
+	        this.totalDuration = source["totalDuration"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class WorkItem {
 	    id: number;
 	    name: string;
@@ -213,6 +313,206 @@ export namespace guiapp {
 	        this.depth = source["depth"];
 	        this.status = source["status"];
 	    }
+	}
+	export class WorktimeReportRow {
+	    projectId: number;
+	    projectName: string;
+	    taskId: number;
+	    taskName: string;
+	    description: string;
+	    date: string;
+	    startTime: string;
+	    endTime: string;
+	    durationSeconds: number;
+	    duration: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new WorktimeReportRow(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.projectId = source["projectId"];
+	        this.projectName = source["projectName"];
+	        this.taskId = source["taskId"];
+	        this.taskName = source["taskName"];
+	        this.description = source["description"];
+	        this.date = source["date"];
+	        this.startTime = source["startTime"];
+	        this.endTime = source["endTime"];
+	        this.durationSeconds = source["durationSeconds"];
+	        this.duration = source["duration"];
+	    }
+	}
+	export class WorktimeByMonthReport {
+	    empty: boolean;
+	    rows: WorktimeReportRow[];
+	    totalSeconds: number;
+	    totalDuration: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new WorktimeByMonthReport(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.empty = source["empty"];
+	        this.rows = this.convertValues(source["rows"], WorktimeReportRow);
+	        this.totalSeconds = source["totalSeconds"];
+	        this.totalDuration = source["totalDuration"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class WorktimeProjectGroup {
+	    projectId: number;
+	    projectName: string;
+	    rows: WorktimeReportRow[];
+	    totalSeconds: number;
+	    totalDuration: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new WorktimeProjectGroup(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.projectId = source["projectId"];
+	        this.projectName = source["projectName"];
+	        this.rows = this.convertValues(source["rows"], WorktimeReportRow);
+	        this.totalSeconds = source["totalSeconds"];
+	        this.totalDuration = source["totalDuration"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class WorktimeGroupedByProjectReport {
+	    empty: boolean;
+	    groups: WorktimeProjectGroup[];
+	    totalSeconds: number;
+	    totalDuration: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new WorktimeGroupedByProjectReport(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.empty = source["empty"];
+	        this.groups = this.convertValues(source["groups"], WorktimeProjectGroup);
+	        this.totalSeconds = source["totalSeconds"];
+	        this.totalDuration = source["totalDuration"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	
+	export class WorktimeTaskDetailRow {
+	    projectId: number;
+	    projectName: string;
+	    taskId: number;
+	    taskName: string;
+	    durationSeconds: number;
+	    duration: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new WorktimeTaskDetailRow(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.projectId = source["projectId"];
+	        this.projectName = source["projectName"];
+	        this.taskId = source["taskId"];
+	        this.taskName = source["taskName"];
+	        this.durationSeconds = source["durationSeconds"];
+	        this.duration = source["duration"];
+	    }
+	}
+	export class WorktimeTaskDetailsReport {
+	    empty: boolean;
+	    rows: WorktimeTaskDetailRow[];
+	    totalSeconds: number;
+	    totalDuration: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new WorktimeTaskDetailsReport(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.empty = source["empty"];
+	        this.rows = this.convertValues(source["rows"], WorktimeTaskDetailRow);
+	        this.totalSeconds = source["totalSeconds"];
+	        this.totalDuration = source["totalDuration"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 
 }
