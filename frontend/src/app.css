@@ -716,18 +716,15 @@ code {
 .summary-metrics {
   display: flex;
   align-items: stretch;
-  gap: 0;
+  justify-content: flex-start;
+  gap: 32px;
   margin: 22px 0 16px;
 }
 
 .summary-metric {
-  flex: 1 1 0;
+  flex: 0 0 auto;
   min-width: 0;
-  text-align: center;
-}
-
-.summary-metric.pause-metric {
-  margin-left: 26px;
+  text-align: left;
 }
 
 .summary-metric span,
@@ -740,15 +737,11 @@ code {
 
 .summary-metric strong {
   display: block;
-  margin: 2px 0 9px;
+  margin: 2px 0 0;
   color: #333;
-  font-size: 27px;
+  font-size: 22px;
   font-weight: 300;
   line-height: 1.2;
-}
-
-.summary-metric strong.negative {
-  color: #ff0000;
 }
 
 .summary-metric em {

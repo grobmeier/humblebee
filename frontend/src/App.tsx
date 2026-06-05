@@ -34,7 +34,7 @@ import { DashboardCalendar } from "./dashboard/DashboardCalendar";
 import { DashboardSummary } from "./dashboard/DashboardSummary";
 import { StopwatchSidebar } from "./dashboard/StopwatchSidebar";
 import { TimeEntriesEmptyState } from "./dashboard/TimeEntriesEmptyState";
-import { atLocalNoon } from "./dashboard/calendarUtils";
+import { addDays, atLocalNoon } from "./dashboard/calendarUtils";
 import { formatInputDate, formatTime } from "./dashboard/dateFormat";
 import { TimeEntryModal } from "./dashboard/TimeEntryModal";
 import type { TimeEntryFormState } from "./dashboard/timeEntryTypes";
@@ -71,6 +71,11 @@ type StopwatchOverlapError = {
   endDate: string;
   endTime: string;
   details: string;
+};
+
+type DashboardSummaryTotals = {
+  monthSeconds: number;
+  weekSeconds: number;
 };
 
 type AppPage = "dashboard" | "reports" | "projects";
@@ -122,6 +127,7 @@ export default function App() {
   const [nowTimestamp, setNowTimestamp] = useState(() => Date.now());
   const [selectedDate, setSelectedDate] = useState(() => atLocalNoon(new Date()));
   const [timeDay, setTimeDay] = useState<guiapp.TimeDay | null>(null);
+  const [summaryTotals, setSummaryTotals] = useState<DashboardSummaryTotals>({ monthSeconds: 0, weekSeconds: 0 });
   const [expandedNoteIds, setExpandedNoteIds] = useState<number[]>([]);
   const [stopwatches, setStopwatches] = useState<guiapp.Stopwatch[]>([]);
   const [timeEntryForm, setTimeEntryForm] = useState<TimeEntryFormState>(() => createTimeEntryForm(atLocalNoon(new Date()), 0));
@@ -201,12 +207,28 @@ export default function App() {
     if (!dashboard?.initialized) {
       return;
     }
-    refreshTimeDay(selectedDate).catch(handleError);
+    refreshDashboardTime(selectedDate).catch(handleError);
   }, [dashboard?.initialized, selectedDate]);
+
+  async function refreshDashboardTime(date: Date) {
+    await refreshTimeDay(date);
+    await refreshSummaryTotals(date);
+  }
 
   async function refreshTimeDay(date: Date) {
     const day = await GetTimeDay(formatInputDate(date));
     setTimeDay(day);
+  }
+
+  async function refreshSummaryTotals(date: Date) {
+    const [weekDays, monthDays] = await Promise.all([
+      Promise.all(dateRange(startOfIsoWeek(date), addDays(startOfIsoWeek(date), 6)).map((day) => GetTimeDay(formatInputDate(day)))),
+      Promise.all(dateRange(startOfMonth(date), endOfMonth(date)).map((day) => GetTimeDay(formatInputDate(day))))
+    ]);
+    setSummaryTotals({
+      weekSeconds: weekDays.reduce((total, day) => total + day.workSeconds, 0),
+      monthSeconds: monthDays.reduce((total, day) => total + day.workSeconds, 0)
+    });
   }
 
   async function refreshStopwatches() {
@@ -231,6 +253,7 @@ export default function App() {
     setProjectWorkItems([]);
     setStopwatches([]);
     setTimeDay(null);
+    setSummaryTotals({ monthSeconds: 0, weekSeconds: 0 });
     setExpandedNoteIds([]);
     setSelectedWorkItemId(0);
     setSelectedProjectPageProjectId(0);
@@ -260,13 +283,13 @@ export default function App() {
       await Start(workItemId);
       setConfirmationStopwatchId(null);
       await refresh();
-      await refreshTimeDay(selectedDate);
+      await refreshDashboardTime(selectedDate);
       await refreshStopwatches();
     } catch (e) {
       const stopwatchOverlap = parseStopwatchOverlapError(e);
       if (stopwatchOverlap) {
         await refresh();
-        await refreshTimeDay(selectedDate);
+        await refreshDashboardTime(selectedDate);
         await refreshStopwatches();
         openStopwatchConfirmationModal(stopwatchOverlap);
         return;
@@ -284,13 +307,13 @@ export default function App() {
     try {
       await Stop();
       await refresh();
-      await refreshTimeDay(selectedDate);
+      await refreshDashboardTime(selectedDate);
       await refreshStopwatches();
     } catch (e) {
       const stopwatchOverlap = parseStopwatchOverlapError(e);
       if (stopwatchOverlap) {
         await refresh();
-        await refreshTimeDay(selectedDate);
+        await refreshDashboardTime(selectedDate);
         await refreshStopwatches();
         openStopwatchConfirmationModal(stopwatchOverlap);
         return;
@@ -311,7 +334,7 @@ export default function App() {
       }
       setConfirmationStopwatchId(null);
       await refresh();
-      await refreshTimeDay(selectedDate);
+      await refreshDashboardTime(selectedDate);
       await refreshStopwatches();
     } catch (e) {
       setStopwatches(previousStopwatches);
@@ -351,7 +374,7 @@ export default function App() {
     }
     const items = await refreshProjectWorkItems();
     await refreshWorkItems();
-    await refreshTimeDay(selectedDate);
+    await refreshDashboardTime(selectedDate);
     await refreshStopwatches();
     const nextProject = items.find((item) => item.parentId == null && item.name.toLowerCase() !== "default");
     setSelectedProjectPageProjectId(nextProject?.id ?? 0);
@@ -413,7 +436,7 @@ export default function App() {
     try {
       setImportResult(await ImportTimeAndBill(importFilePath));
       await refresh();
-      await refreshTimeDay(selectedDate);
+      await refreshDashboardTime(selectedDate);
       await refreshStopwatches();
     } catch (e) {
       setImportModalError(String(e));
@@ -523,7 +546,7 @@ export default function App() {
     try {
       await DeleteTimeEntry(entry.id);
       setExpandedNoteIds((ids) => ids.filter((id) => id !== entry.id));
-      await refreshTimeDay(selectedDate);
+      await refreshDashboardTime(selectedDate);
       await refresh();
     } catch (e) {
       setTimeDay(previousTimeDay);
@@ -629,7 +652,7 @@ export default function App() {
       }
       setSelectedWorkItemId(timeEntryForm.taskId);
       setSelectedDate(savedDate);
-      await refreshTimeDay(savedDate);
+      await refreshDashboardTime(savedDate);
       await refresh();
       await refreshStopwatches();
       setConfirmationStopwatchId(null);
@@ -749,8 +772,8 @@ export default function App() {
                 />
 
                 <DashboardSummary
-                  projectTime={formatHoursMinutes(timeDay?.projectSeconds ?? 0)}
-                  workTime={formatHoursMinutes(timeDay?.workSeconds ?? 0)}
+                  monthWorkTime={formatHoursMinutes(summaryTotals.monthSeconds)}
+                  weekWorkTime={formatHoursMinutes(summaryTotals.weekSeconds)}
                 />
                 <TimeEntriesEmptyState
                   entries={timeDay?.entries ?? []}
@@ -877,6 +900,31 @@ function formatTimeEntryError(error: unknown): string {
     return "Bitte gib eine gueltige Start- und Endzeit ein.";
   }
   return message;
+}
+
+function dateRange(start: Date, end: Date): Date[] {
+  const days: Date[] = [];
+  let current = atLocalNoon(start);
+  const last = atLocalNoon(end);
+  while (current.getTime() <= last.getTime()) {
+    days.push(current);
+    current = addDays(current, 1);
+  }
+  return days;
+}
+
+function startOfIsoWeek(date: Date): Date {
+  const normalized = atLocalNoon(date);
+  const weekday = (normalized.getDay() + 6) % 7;
+  return addDays(normalized, -weekday);
+}
+
+function startOfMonth(date: Date): Date {
+  return atLocalNoon(new Date(date.getFullYear(), date.getMonth(), 1));
+}
+
+function endOfMonth(date: Date): Date {
+  return atLocalNoon(new Date(date.getFullYear(), date.getMonth() + 1, 0));
 }
 
 function createTimeEntryForm(date: Date, projectId: number, taskId = 0): TimeEntryFormState {
