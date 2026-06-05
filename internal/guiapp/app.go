@@ -12,7 +12,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/grobmeier/humblebee/internal/db"
 	"github.com/grobmeier/humblebee/internal/model"
-	"github.com/grobmeier/humblebee/internal/paths"
 	"github.com/grobmeier/humblebee/internal/repo"
 	"github.com/grobmeier/humblebee/internal/service"
 	"github.com/grobmeier/humblebee/internal/timeutil"
@@ -611,7 +610,7 @@ func (a *App) GetWorktimeByMonthReport(req ReportRequest) (*WorktimeByMonthRepor
 		if seconds <= 0 {
 			continue
 		}
-		row := worktimeReportRow(entry, seconds, itemByID, time.Local)
+		row := worktimeReportRow(entry, seconds, itemByID, time.Local, req.Language)
 		report.Rows = append(report.Rows, row)
 		report.TotalSeconds += seconds
 	}
@@ -918,7 +917,7 @@ func parseLocalDateTime(dateValue, timeValue string) (time.Time, error) {
 	return time.ParseInLocation("2006-01-02 15:04", dateValue+" "+timeValue, time.Local)
 }
 
-func worktimeReportRow(entry model.TimeEntry, seconds int64, itemByID map[int64]model.WorkItem, loc *time.Location) WorktimeReportRow {
+func worktimeReportRow(entry model.TimeEntry, seconds int64, itemByID map[int64]model.WorkItem, loc *time.Location, language string) WorktimeReportRow {
 	start := time.Unix(entry.StartTime, 0).In(loc)
 	end := time.Unix(*entry.EndTime, 0).In(loc)
 	description := ""
@@ -947,15 +946,51 @@ func worktimeReportRow(entry model.TimeEntry, seconds int64, itemByID map[int64]
 	}
 	return WorktimeReportRow{
 		ProjectID:       projectID,
-		ProjectName:     projectName,
+		ProjectName:     reportWorkItemLabel(projectName, language),
 		TaskID:          taskID,
-		TaskName:        taskName,
+		TaskName:        reportWorkItemLabel(taskName, language),
 		Description:     description,
 		Date:            start.Format("2006-01-02"),
 		StartTime:       start.Format("15:04"),
 		EndTime:         end.Format("15:04"),
 		DurationSeconds: seconds,
 		Duration:        formatReportDuration(seconds),
+	}
+}
+
+func reportWorkItemLabel(name string, language string) string {
+	if language == "en" {
+		switch name {
+		case "@":
+			return "Absences"
+		case "@break":
+			return "Break"
+		case "@overtime":
+			return "Overtime compensation"
+		case "@public_holiday":
+			return "Public holiday"
+		case "@sick_leave":
+			return "Sick leave"
+		case "@vacation":
+			return "Vacation"
+		}
+		return name
+	}
+	switch name {
+	case "@":
+		return "Abwesenheiten"
+	case "@break":
+		return "Pause"
+	case "@overtime":
+		return "Überstundenausgleich"
+	case "@public_holiday":
+		return "Feiertag"
+	case "@sick_leave":
+		return "Krankheit"
+	case "@vacation":
+		return "Urlaub"
+	default:
+		return name
 	}
 }
 
@@ -1032,14 +1067,27 @@ func (a *App) ListWorkItems() ([]WorkItem, error) {
 		return nil, err
 	}
 	itemsRepo := repo.NewWorkItemRepo(database)
-	items, err := itemsRepo.ListActive(personID)
+	items, err := itemsRepo.ListProjectItems(personID)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]WorkItem, 0, len(items))
-	for _, it := range items {
-		// Expose Default row too (GUI can choose to hide it and use Default semantics).
-		out = append(out, *workItemDTO(it))
+	byID := make(map[int64]model.WorkItem, len(items))
+	for _, item := range items {
+		byID[item.ID] = item
+	}
+	included := map[int64]bool{}
+	for _, item := range items {
+		if !workItemHasActivePath(item, byID) {
+			continue
+		}
+		includeWorkItemPath(item, byID, included)
+	}
+	out := make([]WorkItem, 0, len(included))
+	for _, item := range items {
+		if included[item.ID] {
+			// Expose Default row too (GUI can choose to hide it and use Default semantics).
+			out = append(out, *workItemDTO(item))
+		}
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].Depth != out[j].Depth {
@@ -1048,6 +1096,36 @@ func (a *App) ListWorkItems() ([]WorkItem, error) {
 		return strings.ToLower(out[i].Name) < strings.ToLower(out[j].Name)
 	})
 	return out, nil
+}
+
+func workItemHasActivePath(item model.WorkItem, byID map[int64]model.WorkItem) bool {
+	if item.Status != model.WorkItemStatusActive {
+		return false
+	}
+	current := item
+	for current.ParentID != nil {
+		parent, ok := byID[*current.ParentID]
+		if !ok || parent.Status != model.WorkItemStatusActive {
+			return false
+		}
+		current = parent
+	}
+	return true
+}
+
+func includeWorkItemPath(item model.WorkItem, byID map[int64]model.WorkItem, included map[int64]bool) {
+	current := item
+	for {
+		included[current.ID] = true
+		if current.ParentID == nil {
+			return
+		}
+		parent, ok := byID[*current.ParentID]
+		if !ok {
+			return
+		}
+		current = parent
+	}
 }
 
 func (a *App) ListProjectWorkItems() ([]WorkItem, error) {
@@ -1371,7 +1449,7 @@ func stopwatchOverlapError(running *model.TimeEntry, end time.Time, loc *time.Lo
 }
 
 func (a *App) openDB() (*sql.DB, string, error) {
-	dbPath, err := paths.DBPath()
+	dbPath, err := a.databasePath()
 	if err != nil {
 		return nil, "", err
 	}

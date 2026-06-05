@@ -1,0 +1,54 @@
+name: sbom
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+  release:
+    types:
+      - published
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    if: github.event_name != 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate CycloneDX SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: humblebee-sbom.cdx.json
+          artifact-name: humblebee-sbom.cdx.json
+          upload-artifact: true
+          upload-release-assets: false
+
+  release:
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate and attach CycloneDX SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: cyclonedx-json
+          output-file: humblebee-sbom.cdx.json
+          artifact-name: humblebee-sbom.cdx.json
+          upload-artifact: true
+          upload-release-assets: true

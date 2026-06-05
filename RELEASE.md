@@ -59,8 +59,13 @@ git push origin v0.1.0
 - GitHub Release contains:
   - `humblebee_<version>_windows_amd64.zip` (and other OS/arch archives)
   - `checksums.txt`
+  - `humblebee-sbom.cdx.json`
 - Homebrew: check the formula commit landed in `grobmeier/homebrew-tap`
 - Scoop: check the manifest commit landed in `grobmeier/scoop-bucket`
+
+7) Verify the SBOM workflow:
+- In `grobmeier/humblebee` -> Actions -> `sbom`
+- The release-triggered run should publish `humblebee-sbom.cdx.json` as a workflow artifact and attach it to the GitHub Release.
 
 ## Optional: local dry run (recommended before tagging)
 
@@ -82,4 +87,3 @@ This builds artifacts locally without publishing.
 
     git tag -d v0.x.x
     git push --delete origin v0.x.x
-    

@@ -298,6 +298,28 @@ func TestGetWorktimeByMonthReportShowsMonthlyTimeRows(t *testing.T) {
 	}
 }
 
+func TestReportWorkItemLabelLocalizesTimeAndBillReservedNames(t *testing.T) {
+	tests := []struct {
+		name     string
+		language string
+		want     string
+	}{
+		{name: "@", language: "de", want: "Abwesenheiten"},
+		{name: "@break", language: "de", want: "Pause"},
+		{name: "@overtime", language: "de", want: "Überstundenausgleich"},
+		{name: "@public_holiday", language: "en", want: "Public holiday"},
+		{name: "@sick_leave", language: "en", want: "Sick leave"},
+		{name: "@vacation", language: "en", want: "Vacation"},
+		{name: "Client", language: "de", want: "Client"},
+	}
+
+	for _, tt := range tests {
+		if got := reportWorkItemLabel(tt.name, tt.language); got != tt.want {
+			t.Fatalf("reportWorkItemLabel(%q, %q) = %q, want %q", tt.name, tt.language, got, tt.want)
+		}
+	}
+}
+
 func TestGetWorktimeGroupedByProjectReportGroupsRowsAndTotals(t *testing.T) {
 	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
 
@@ -733,6 +755,57 @@ func TestSetTaskActiveHidesAndRestoresTaskInStopwatchWorkItems(t *testing.T) {
 	}
 	if !containsGUIWorkItem(activeItems, task.ID, "Research") {
 		t.Fatalf("expected restored task in active work items: %#v", activeItems)
+	}
+}
+
+func TestListWorkItemsIncludesDisplayParentsAndHidesArchivedParentChildren(t *testing.T) {
+	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
+
+	app := New()
+	if err := app.Init("user@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	activeProject, err := app.CreateProject("Active Client")
+	if err != nil {
+		t.Fatal(err)
+	}
+	activeTask, err := app.CreateTask(activeProject.ID, "Research")
+	if err != nil {
+		t.Fatal(err)
+	}
+	archivedProject, err := app.CreateProject("Old Client")
+	if err != nil {
+		t.Fatal(err)
+	}
+	archivedChild, err := app.CreateTask(archivedProject.ID, "Still Active Child")
+	if err != nil {
+		t.Fatal(err)
+	}
+	database, _, err := app.openDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer database.Close()
+	personID, err := app.defaultPersonID(database)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repo.NewWorkItemRepo(database).SetStatus(personID, archivedProject.ID, model.WorkItemStatusArchived); err != nil {
+		t.Fatal(err)
+	}
+
+	activeItems, err := app.ListWorkItems()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !containsGUIWorkItem(activeItems, activeProject.ID, "Active Client") {
+		t.Fatalf("expected active parent for project-task display context: %#v", activeItems)
+	}
+	if !containsGUIWorkItem(activeItems, activeTask.ID, "Research") {
+		t.Fatalf("expected active task in stopwatch work items: %#v", activeItems)
+	}
+	if containsGUIWorkItem(activeItems, archivedProject.ID, "Old Client") || containsGUIWorkItem(activeItems, archivedChild.ID, "Still Active Child") {
+		t.Fatalf("expected archived parent subtree to be hidden from stopwatch work items: %#v", activeItems)
 	}
 }
 

@@ -1,4 +1,5 @@
 import { displayWorkItem, type WorkItemNode } from "./workItemUtils";
+import type { DateLanguage } from "./dateFormat";
 
 type TimeEntryRow = {
   description: string;
@@ -14,20 +15,21 @@ type TimeEntryRow = {
 type TimeEntriesEmptyStateProps = {
   expandedNoteIds: number[];
   entries: TimeEntryRow[];
+  language: DateLanguage;
   onDeleteEntry: (entry: TimeEntryRow) => void;
   onEditEntry: (entry: TimeEntryRow) => void;
   onToggleNote: (entryId: number) => void;
   workItems: WorkItemNode[];
 };
 
-export function TimeEntriesEmptyState({ entries, expandedNoteIds, onDeleteEntry, onEditEntry, onToggleNote, workItems }: TimeEntriesEmptyStateProps) {
+export function TimeEntriesEmptyState({ entries, expandedNoteIds, language, onDeleteEntry, onEditEntry, onToggleNote, workItems }: TimeEntriesEmptyStateProps) {
   return (
     <section className="entries-section">
       <h2>Zeiteintraege</h2>
       {entries.length ? (
         <div className="entries-list">
           {entries.map((entry) => {
-            const display = displayWorkItem(entry.workItemId ?? 0, workItems);
+            const display = displayWorkItem(entry.workItemId ?? 0, workItems, language);
             const hasNote = entry.description.trim().length > 0;
             const isNoteExpanded = expandedNoteIds.includes(entry.id);
             return (

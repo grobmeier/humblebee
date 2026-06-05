@@ -1,7 +1,10 @@
 import { SideNavigationList } from "../components/SideNavigationList";
+import type { DateLanguage } from "../dashboard/dateFormat";
+import { labelWorkItemName } from "../dashboard/workItemUtils";
 import type { ProjectsPageText, WorkItem } from "./projectTypes";
 
 type ProjectsListProps = {
+  language: DateLanguage;
   projects: WorkItem[];
   selectedProjectId?: number;
   t: ProjectsPageText;
@@ -9,7 +12,7 @@ type ProjectsListProps = {
   onSelectProject: (projectId: number) => void;
 };
 
-export function ProjectsList({ projects, selectedProjectId, t, onCreateProject, onSelectProject }: ProjectsListProps) {
+export function ProjectsList({ language, projects, selectedProjectId, t, onCreateProject, onSelectProject }: ProjectsListProps) {
   return (
     <SideNavigationList
       action={
@@ -19,7 +22,7 @@ export function ProjectsList({ projects, selectedProjectId, t, onCreateProject, 
       }
       ariaLabel={t.projectList}
       emptyText={t.emptyProjects}
-      items={projects.map((project) => ({ id: project.id, label: project.name }))}
+      items={projects.map((project) => ({ id: project.id, label: labelWorkItemName(project.name, language) }))}
       selectedId={selectedProjectId}
       title={t.projectList}
       onSelect={(id) => onSelectProject(Number(id))}

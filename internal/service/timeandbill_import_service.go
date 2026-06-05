@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/grobmeier/humblebee/internal/model"
 	"github.com/grobmeier/humblebee/internal/repo"
 )
 
@@ -27,9 +28,10 @@ type TimeAndBillImportService struct {
 }
 
 type TimeAndBillImportOptions struct {
-	DryRun         bool
-	AssumeYes      bool
-	UpdateExisting bool
+	DryRun          bool
+	AssumeYes       bool
+	UpdateExisting  bool
+	SkipConflicting bool
 }
 
 type TimeAndBillImportSummary struct {
@@ -44,7 +46,27 @@ type TimeAndBillImportSummary struct {
 	TimeEntriesCreated int
 	TimeEntriesUpdated int
 	TimeEntriesSkipped int
+	TimeEntryConflicts int
 	NeedsConfirmation  int
+}
+
+type TimeAndBillImportConflict struct {
+	TimeEntryUUID string `json:"timeEntryUuid"`
+	ProjectName   string `json:"projectName"`
+	TaskName      string `json:"taskName"`
+	Start         string `json:"start"`
+	End           string `json:"end"`
+	LocalEntryID  int64  `json:"localEntryId"`
+	LocalStart    int64  `json:"localStart"`
+	LocalEnd      int64  `json:"localEnd"`
+}
+
+type TimeAndBillImportPreview struct {
+	ExportUUID      string                      `json:"exportUuid"`
+	ExportedAt      string                      `json:"exportedAt"`
+	SourceUserEmail string                      `json:"sourceUserEmail"`
+	Summary         TimeAndBillImportSummary    `json:"summary"`
+	Conflicts       []TimeAndBillImportConflict `json:"conflicts"`
 }
 
 type timeAndBillExport struct {
@@ -114,15 +136,34 @@ func (s *TimeAndBillImportService) SetConfirm(confirm func(string) (bool, error)
 }
 
 func (s *TimeAndBillImportService) ImportFile(personID int64, path string, options TimeAndBillImportOptions) (TimeAndBillImportSummary, error) {
-	body, err := os.ReadFile(path)
+	payload, err := readTimeAndBillExport(path)
 	if err != nil {
 		return TimeAndBillImportSummary{}, err
 	}
-	var payload timeAndBillExport
-	if err := json.Unmarshal(body, &payload); err != nil {
-		return TimeAndBillImportSummary{}, err
-	}
 	return s.Import(personID, payload, options)
+}
+
+func (s *TimeAndBillImportService) PreviewFile(personID int64, path string, options TimeAndBillImportOptions) (TimeAndBillImportPreview, error) {
+	payload, err := readTimeAndBillExport(path)
+	if err != nil {
+		return TimeAndBillImportPreview{}, err
+	}
+	return s.Preview(personID, payload, options)
+}
+
+func (s *TimeAndBillImportService) Preview(personID int64, payload timeAndBillExport, options TimeAndBillImportOptions) (TimeAndBillImportPreview, error) {
+	options.DryRun = true
+	summary, conflicts, err := s.plan(personID, payload, TimeAndBillImportSummary{ExportUUID: payload.ExportUUID}, options)
+	if err != nil {
+		return TimeAndBillImportPreview{}, err
+	}
+	return TimeAndBillImportPreview{
+		ExportUUID:      payload.ExportUUID,
+		ExportedAt:      payload.ExportedAt,
+		SourceUserEmail: payload.User.Email,
+		Summary:         summary,
+		Conflicts:       conflicts,
+	}, nil
 }
 
 func (s *TimeAndBillImportService) Import(personID int64, payload timeAndBillExport, options TimeAndBillImportOptions) (TimeAndBillImportSummary, error) {
@@ -141,7 +182,8 @@ func (s *TimeAndBillImportService) Import(personID int64, payload timeAndBillExp
 	}
 
 	if options.DryRun {
-		return s.plan(personID, payload, summary, options)
+		planned, _, err := s.plan(personID, payload, summary, options)
+		return planned, err
 	}
 
 	tx, err := s.db.Begin()
@@ -168,11 +210,23 @@ func (s *TimeAndBillImportService) Import(personID int64, payload timeAndBillExp
 	return summary, tx.Commit()
 }
 
-func (s *TimeAndBillImportService) plan(personID int64, payload timeAndBillExport, summary TimeAndBillImportSummary, options TimeAndBillImportOptions) (TimeAndBillImportSummary, error) {
+func (s *TimeAndBillImportService) plan(personID int64, payload timeAndBillExport, summary TimeAndBillImportSummary, options TimeAndBillImportOptions) (TimeAndBillImportSummary, []TimeAndBillImportConflict, error) {
+	if err := validateTimeAndBillExport(payload); err != nil {
+		return summary, nil, err
+	}
+	alreadyImported, err := s.hasImportRun(payload.ExportUUID)
+	if err != nil {
+		return summary, nil, err
+	}
+	summary.AlreadyImported = alreadyImported
+	if alreadyImported && !options.UpdateExisting {
+		return summary, nil, nil
+	}
+
 	projectIDs := map[string]int64{}
 	for _, project := range payload.Projects {
 		if id, ok, err := s.findMapping(project.UUID, "workitems"); err != nil {
-			return summary, err
+			return summary, nil, err
 		} else if ok {
 			projectIDs[project.UUID] = id
 			summary.ProjectsSkipped++
@@ -180,7 +234,7 @@ func (s *TimeAndBillImportService) plan(personID int64, payload timeAndBillExpor
 		}
 		existing, err := s.workItem.FindByNameUnderParent(personID, nil, project.Name)
 		if err != nil {
-			return summary, err
+			return summary, nil, err
 		}
 		if existing != nil {
 			summary.NeedsConfirmation++
@@ -191,7 +245,7 @@ func (s *TimeAndBillImportService) plan(personID int64, payload timeAndBillExpor
 
 	for _, task := range payload.Tasks {
 		if _, ok, err := s.findMapping(task.UUID, "workitems"); err != nil {
-			return summary, err
+			return summary, nil, err
 		} else if ok {
 			summary.TasksSkipped++
 		} else {
@@ -199,9 +253,17 @@ func (s *TimeAndBillImportService) plan(personID int64, payload timeAndBillExpor
 		}
 	}
 
+	conflicts := []TimeAndBillImportConflict{}
+	var overlapChecker *importOverlapChecker
+	if options.SkipConflicting {
+		overlapChecker, err = s.preloadImportOverlaps(personID, payload)
+		if err != nil {
+			return summary, nil, err
+		}
+	}
 	for _, entry := range payload.TimeEntries {
 		if _, ok, err := s.findMapping(entry.UUID, "time_entries"); err != nil {
-			return summary, err
+			return summary, nil, err
 		} else if ok {
 			if options.UpdateExisting {
 				summary.TimeEntriesUpdated++
@@ -209,10 +271,21 @@ func (s *TimeAndBillImportService) plan(personID int64, payload timeAndBillExpor
 				summary.TimeEntriesSkipped++
 			}
 		} else {
+			if options.SkipConflicting {
+				conflict, hasConflict, err := findImportConflict(payload, entry, overlapChecker)
+				if err != nil {
+					return summary, nil, err
+				}
+				if hasConflict {
+					conflicts = append(conflicts, conflict)
+					summary.TimeEntryConflicts++
+					continue
+				}
+			}
 			summary.TimeEntriesCreated++
 		}
 	}
-	return summary, nil
+	return summary, conflicts, nil
 }
 
 func (s *TimeAndBillImportService) apply(tx *sql.Tx, personID int64, payload timeAndBillExport, summary *TimeAndBillImportSummary, options TimeAndBillImportOptions) error {
@@ -221,7 +294,11 @@ func (s *TimeAndBillImportService) apply(tx *sql.Tx, personID int64, payload tim
 		if strings.TrimSpace(customer.UUID) == "" || strings.TrimSpace(customer.Name) == "" {
 			continue
 		}
-		id, created, mapped, err := s.ensureWorkItem(tx, personID, customer.UUID, customer.Name, nil, 0, options, true)
+		status := model.WorkItemStatusActive
+		if !customer.Active {
+			status = model.WorkItemStatusArchived
+		}
+		id, created, mapped, err := s.ensureWorkItem(tx, personID, customer.UUID, customer.Name, nil, 0, status, options, true)
 		if err != nil {
 			return err
 		}
@@ -237,6 +314,7 @@ func (s *TimeAndBillImportService) apply(tx *sql.Tx, personID int64, payload tim
 
 	projectIDs := map[string]int64{}
 	projectDepths := map[string]int{}
+	projectStatuses := map[string]model.WorkItemStatus{}
 	for _, project := range payload.Projects {
 		parentID := (*int64)(nil)
 		depth := 0
@@ -246,12 +324,17 @@ func (s *TimeAndBillImportService) apply(tx *sql.Tx, personID int64, payload tim
 				depth = 1
 			}
 		}
-		id, created, mapped, err := s.ensureWorkItem(tx, personID, project.UUID, project.Name, parentID, depth, options, true)
+		status := model.WorkItemStatusActive
+		if !project.Active {
+			status = model.WorkItemStatusArchived
+		}
+		id, created, mapped, err := s.ensureWorkItem(tx, personID, project.UUID, project.Name, parentID, depth, status, options, true)
 		if err != nil {
 			return err
 		}
 		projectIDs[project.UUID] = id
 		projectDepths[project.UUID] = depth
+		projectStatuses[project.UUID] = status
 		if created {
 			summary.ProjectsCreated++
 		} else if mapped {
@@ -267,7 +350,11 @@ func (s *TimeAndBillImportService) apply(tx *sql.Tx, personID int64, payload tim
 		if !ok {
 			return fmt.Errorf("task %q references unknown project UUID %q", task.Name, task.ProjectUUID)
 		}
-		id, created, mapped, err := s.ensureWorkItem(tx, personID, task.UUID, task.Name, &projectID, projectDepths[task.ProjectUUID]+1, options, false)
+		status := model.WorkItemStatusActive
+		if projectStatuses[task.ProjectUUID] != model.WorkItemStatusActive || !task.Active || task.Complete {
+			status = model.WorkItemStatusArchived
+		}
+		id, created, mapped, err := s.ensureWorkItem(tx, personID, task.UUID, task.Name, &projectID, projectDepths[task.ProjectUUID]+1, status, options, false)
 		if err != nil {
 			return err
 		}
@@ -286,7 +373,7 @@ func (s *TimeAndBillImportService) apply(tx *sql.Tx, personID int64, payload tim
 		if !ok {
 			return fmt.Errorf("time entry %s references unknown task UUID %q", entry.UUID, entry.TaskUUID)
 		}
-		created, updated, skipped, err := s.applyTimeEntry(tx, personID, entry, taskID, options)
+		created, updated, skipped, conflicted, err := s.applyTimeEntry(tx, personID, entry, taskID, options)
 		if err != nil {
 			return err
 		}
@@ -299,11 +386,14 @@ func (s *TimeAndBillImportService) apply(tx *sql.Tx, personID int64, payload tim
 		if skipped {
 			summary.TimeEntriesSkipped++
 		}
+		if conflicted {
+			summary.TimeEntryConflicts++
+		}
 	}
 	return nil
 }
 
-func (s *TimeAndBillImportService) ensureWorkItem(tx *sql.Tx, personID int64, sourceUUID string, name string, parentID *int64, depth int, options TimeAndBillImportOptions, askOnNameMatch bool) (int64, bool, bool, error) {
+func (s *TimeAndBillImportService) ensureWorkItem(tx *sql.Tx, personID int64, sourceUUID string, name string, parentID *int64, depth int, status model.WorkItemStatus, options TimeAndBillImportOptions, askOnNameMatch bool) (int64, bool, bool, error) {
 	if id, ok, err := findMappingTx(tx, sourceUUID, "workitems"); err != nil {
 		return 0, false, false, err
 	} else if ok {
@@ -330,7 +420,7 @@ func (s *TimeAndBillImportService) ensureWorkItem(tx *sql.Tx, personID int64, so
 		}
 	}
 
-	id, err := createWorkItemTx(tx, personID, uuid.NewString(), name, parentID, depth, s.now().Unix())
+	id, err := createWorkItemTx(tx, personID, uuid.NewString(), name, parentID, depth, status, s.now().Unix())
 	if err != nil {
 		return 0, false, false, err
 	}
@@ -340,25 +430,34 @@ func (s *TimeAndBillImportService) ensureWorkItem(tx *sql.Tx, personID int64, so
 	return id, true, false, nil
 }
 
-func (s *TimeAndBillImportService) applyTimeEntry(tx *sql.Tx, personID int64, entry timeAndBillExportEntry, taskID int64, options TimeAndBillImportOptions) (bool, bool, bool, error) {
+func (s *TimeAndBillImportService) applyTimeEntry(tx *sql.Tx, personID int64, entry timeAndBillExportEntry, taskID int64, options TimeAndBillImportOptions) (bool, bool, bool, bool, error) {
 	existingID, exists, err := findMappingTx(tx, entry.UUID, "time_entries")
 	if err != nil {
-		return false, false, false, err
+		return false, false, false, false, err
 	}
 	start, end, duration, err := parseImportedTimeEntry(entry)
 	if err != nil {
-		return false, false, false, err
+		return false, false, false, false, err
 	}
 	if exists {
 		if !options.UpdateExisting {
-			return false, false, true, nil
+			return false, false, true, false, nil
 		}
 		_, err := tx.Exec(`
 			UPDATE time_entries
 			SET workitem_id = ?, description = ?, start_time = ?, end_time = ?, duration = ?, tz_name = ?, updated_at = ?
 			WHERE person_id = ? AND id = ?
 		`, taskID, entry.Description, start, end, duration, entry.Timezone, s.now().Unix(), personID, existingID)
-		return false, true, false, err
+		return false, true, false, false, err
+	}
+	if options.SkipConflicting {
+		conflict, err := hasOverlapTx(tx, personID, start, end)
+		if err != nil {
+			return false, false, false, false, err
+		}
+		if conflict != nil {
+			return false, false, false, true, nil
+		}
 	}
 
 	res, err := tx.Exec(`
@@ -366,16 +465,16 @@ func (s *TimeAndBillImportService) applyTimeEntry(tx *sql.Tx, personID int64, en
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
 	`, uuid.NewString(), personID, taskID, entry.Description, start, end, duration, entry.Timezone, s.now().Unix())
 	if err != nil {
-		return false, false, false, err
+		return false, false, false, false, err
 	}
 	id, err := res.LastInsertId()
 	if err != nil {
-		return false, false, false, err
+		return false, false, false, false, err
 	}
 	if err := insertMappingTx(tx, entry.UUID, "time_entries", id); err != nil {
-		return false, false, false, err
+		return false, false, false, false, err
 	}
-	return true, false, false, nil
+	return true, false, false, false, nil
 }
 
 func validateTimeAndBillExport(payload timeAndBillExport) error {
@@ -406,6 +505,18 @@ func validateTimeAndBillExport(payload timeAndBillExport) error {
 	return nil
 }
 
+func readTimeAndBillExport(path string) (timeAndBillExport, error) {
+	body, err := os.ReadFile(path)
+	if err != nil {
+		return timeAndBillExport{}, err
+	}
+	var payload timeAndBillExport
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return timeAndBillExport{}, err
+	}
+	return payload, nil
+}
+
 func parseImportedTimeEntry(entry timeAndBillExportEntry) (int64, *int64, *int64, error) {
 	start, err := time.Parse(time.RFC3339, entry.Start)
 	if err != nil {
@@ -426,6 +537,187 @@ func parseImportedTimeEntry(entry timeAndBillExportEntry) (int64, *int64, *int64
 		duration = &value
 	}
 	return start.Unix(), endEpoch, duration, nil
+}
+
+type importOverlapChecker struct {
+	entries []model.TimeEntry
+}
+
+func (s *TimeAndBillImportService) preloadImportOverlaps(personID int64, payload timeAndBillExport) (*importOverlapChecker, error) {
+	var minStart int64
+	var maxEnd int64
+	for _, entry := range payload.TimeEntries {
+		start, end, _, err := parseImportedTimeEntry(entry)
+		if err != nil {
+			return nil, err
+		}
+		if end == nil {
+			continue
+		}
+		if minStart == 0 || start < minStart {
+			minStart = start
+		}
+		if *end > maxEnd {
+			maxEnd = *end
+		}
+	}
+	if minStart == 0 || maxEnd == 0 {
+		return &importOverlapChecker{}, nil
+	}
+	entries, err := repo.NewTimeEntryRepo(s.db).ListOverlapping(personID, minStart, maxEnd)
+	if err != nil {
+		return nil, err
+	}
+	return &importOverlapChecker{entries: entries}, nil
+}
+
+func findImportConflict(payload timeAndBillExport, entry timeAndBillExportEntry, overlapChecker *importOverlapChecker) (TimeAndBillImportConflict, bool, error) {
+	start, end, _, err := parseImportedTimeEntry(entry)
+	if err != nil {
+		return TimeAndBillImportConflict{}, false, err
+	}
+	overlap := overlapChecker.firstOverlap(start, end)
+	if overlap == nil {
+		return TimeAndBillImportConflict{}, false, nil
+	}
+	projectName, taskName := importNames(payload, entry)
+	localEnd := int64(0)
+	if overlap.EndTime != nil {
+		localEnd = *overlap.EndTime
+	}
+	endValue := ""
+	if entry.End != nil {
+		endValue = *entry.End
+	}
+	return TimeAndBillImportConflict{
+		TimeEntryUUID: entry.UUID,
+		ProjectName:   projectName,
+		TaskName:      taskName,
+		Start:         entry.Start,
+		End:           endValue,
+		LocalEntryID:  overlap.ID,
+		LocalStart:    overlap.StartTime,
+		LocalEnd:      localEnd,
+	}, true, nil
+}
+
+func (c *importOverlapChecker) firstOverlap(start int64, end *int64) *model.TimeEntry {
+	if c == nil || end == nil {
+		return nil
+	}
+	for i := range c.entries {
+		entry := &c.entries[i]
+		if entry.EndTime != nil && entry.StartTime < *end && *entry.EndTime > start {
+			return entry
+		}
+	}
+	return nil
+}
+
+func hasOverlapTx(tx *sql.Tx, personID int64, start int64, end *int64) (*model.TimeEntry, error) {
+	if end == nil {
+		return nil, nil
+	}
+	row := tx.QueryRow(`
+		SELECT id, uuid, person_id, workitem_id, description, start_time, end_time, duration, entry_source, tz_name, tz_offset_minutes, created_at, updated_at
+		FROM time_entries
+		WHERE person_id = ?
+		  AND end_time IS NOT NULL
+		  AND entry_source NOT IN ('stopwatch_conflict', 'stopwatch_unbooked')
+		  AND start_time < ?
+		  AND end_time > ?
+		ORDER BY start_time ASC
+		LIMIT 1
+	`, personID, *end, start)
+	entry, err := scanImportedTimeEntry(row)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return entry, nil
+}
+
+type importedTimeEntryScanner interface {
+	Scan(dest ...any) error
+}
+
+func scanImportedTimeEntry(s importedTimeEntryScanner) (*model.TimeEntry, error) {
+	var e model.TimeEntry
+	var workItemID sql.NullInt64
+	var desc sql.NullString
+	var end sql.NullInt64
+	var dur sql.NullInt64
+	var entrySource sql.NullString
+	var tzName sql.NullString
+	var tzOffset sql.NullInt64
+	var updated sql.NullInt64
+	if err := s.Scan(
+		&e.ID,
+		&e.UUID,
+		&e.PersonID,
+		&workItemID,
+		&desc,
+		&e.StartTime,
+		&end,
+		&dur,
+		&entrySource,
+		&tzName,
+		&tzOffset,
+		&e.CreatedAt,
+		&updated,
+	); err != nil {
+		return nil, err
+	}
+	if workItemID.Valid {
+		v := workItemID.Int64
+		e.WorkItemID = &v
+	}
+	if desc.Valid {
+		v := desc.String
+		e.Description = &v
+	}
+	if end.Valid {
+		v := end.Int64
+		e.EndTime = &v
+	}
+	if dur.Valid {
+		v := dur.Int64
+		e.Duration = &v
+	}
+	if entrySource.Valid {
+		e.EntrySource = entrySource.String
+	}
+	if tzName.Valid {
+		e.TZName = tzName.String
+	}
+	if tzOffset.Valid {
+		e.TZOffsetMin = int(tzOffset.Int64)
+	}
+	if updated.Valid {
+		v := updated.Int64
+		e.UpdatedAt = &v
+	}
+	return &e, nil
+}
+
+func importNames(payload timeAndBillExport, entry timeAndBillExportEntry) (string, string) {
+	projectName := ""
+	taskName := ""
+	for _, project := range payload.Projects {
+		if project.UUID == entry.ProjectUUID {
+			projectName = project.Name
+			break
+		}
+	}
+	for _, task := range payload.Tasks {
+		if task.UUID == entry.TaskUUID {
+			taskName = task.Name
+			break
+		}
+	}
+	return projectName, taskName
 }
 
 func (s *TimeAndBillImportService) hasImportRun(exportUUID string) (bool, error) {
@@ -512,11 +804,11 @@ func findWorkItemByNameUnderParentTx(tx *sql.Tx, personID int64, parentID *int64
 	return &item, nil
 }
 
-func createWorkItemTx(tx *sql.Tx, personID int64, localUUID string, name string, parentID *int64, depth int, createdAt int64) (int64, error) {
+func createWorkItemTx(tx *sql.Tx, personID int64, localUUID string, name string, parentID *int64, depth int, status model.WorkItemStatus, createdAt int64) (int64, error) {
 	res, err := tx.Exec(`
 		INSERT INTO workitems (uuid, person_id, name, parent_id, depth, status, created_at)
-		VALUES (?, ?, ?, ?, ?, 'ACTIVE', ?)
-	`, localUUID, personID, name, parentID, depth, createdAt)
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+	`, localUUID, personID, name, parentID, depth, string(status), createdAt)
 	if err != nil {
 		return 0, err
 	}

@@ -78,6 +78,157 @@ export namespace guiapp {
 		    return a;
 		}
 	}
+	export class DatabaseInfo {
+	    path: string;
+	    defaultPath: string;
+	    initialized: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new DatabaseInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.defaultPath = source["defaultPath"];
+	        this.initialized = source["initialized"];
+	    }
+	}
+	export class ImportConflict {
+	    timeEntryUuid: string;
+	    projectName: string;
+	    taskName: string;
+	    start: string;
+	    end: string;
+	    localEntryId: number;
+	    localStart: number;
+	    localEnd: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ImportConflict(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.timeEntryUuid = source["timeEntryUuid"];
+	        this.projectName = source["projectName"];
+	        this.taskName = source["taskName"];
+	        this.start = source["start"];
+	        this.end = source["end"];
+	        this.localEntryId = source["localEntryId"];
+	        this.localStart = source["localStart"];
+	        this.localEnd = source["localEnd"];
+	    }
+	}
+	export class ImportSummary {
+	    exportUuid: string;
+	    alreadyImported: boolean;
+	    projectsCreated: number;
+	    projectsMapped: number;
+	    projectsSkipped: number;
+	    tasksCreated: number;
+	    tasksMapped: number;
+	    tasksSkipped: number;
+	    timeEntriesCreated: number;
+	    timeEntriesUpdated: number;
+	    timeEntriesSkipped: number;
+	    timeEntryConflicts: number;
+	    needsConfirmation: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ImportSummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.exportUuid = source["exportUuid"];
+	        this.alreadyImported = source["alreadyImported"];
+	        this.projectsCreated = source["projectsCreated"];
+	        this.projectsMapped = source["projectsMapped"];
+	        this.projectsSkipped = source["projectsSkipped"];
+	        this.tasksCreated = source["tasksCreated"];
+	        this.tasksMapped = source["tasksMapped"];
+	        this.tasksSkipped = source["tasksSkipped"];
+	        this.timeEntriesCreated = source["timeEntriesCreated"];
+	        this.timeEntriesUpdated = source["timeEntriesUpdated"];
+	        this.timeEntriesSkipped = source["timeEntriesSkipped"];
+	        this.timeEntryConflicts = source["timeEntryConflicts"];
+	        this.needsConfirmation = source["needsConfirmation"];
+	    }
+	}
+	export class ImportPreview {
+	    exportUuid: string;
+	    exportedAt: string;
+	    sourceUserEmail: string;
+	    existingTimeEntryCount: number;
+	    summary: ImportSummary;
+	    conflicts: ImportConflict[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ImportPreview(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.exportUuid = source["exportUuid"];
+	        this.exportedAt = source["exportedAt"];
+	        this.sourceUserEmail = source["sourceUserEmail"];
+	        this.existingTimeEntryCount = source["existingTimeEntryCount"];
+	        this.summary = this.convertValues(source["summary"], ImportSummary);
+	        this.conflicts = this.convertValues(source["conflicts"], ImportConflict);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class ImportResult {
+	    summary: ImportSummary;
+	    conflicts: ImportConflict[];
+	
+	    static createFrom(source: any = {}) {
+	        return new ImportResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.summary = this.convertValues(source["summary"], ImportSummary);
+	        this.conflicts = this.convertValues(source["conflicts"], ImportConflict);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
 	export class ReportRequest {
 	    mode: string;
 	    month: number;

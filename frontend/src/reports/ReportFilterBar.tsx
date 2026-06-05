@@ -1,5 +1,6 @@
 import { DashboardDateInput } from "../dashboard/TimeEntryModal";
 import type { DateLanguage } from "../dashboard/dateFormat";
+import { labelWorkItemName } from "../dashboard/workItemUtils";
 import { monthOptions } from "./reportUtils";
 import type { ReportFilter, ReportsPageText, WorkItem } from "./reportTypes";
 
@@ -46,7 +47,7 @@ export function ReportFilterBar({
             <option value={0}>{t.firstReportableProject}</option>
             {projectOptions.map((project) => (
               <option key={project.id} value={project.id}>
-                {project.name}
+                {labelWorkItemName(project.name, language)}
               </option>
             ))}
           </select>

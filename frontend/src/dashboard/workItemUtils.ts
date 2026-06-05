@@ -5,12 +5,41 @@ export type WorkItemNode = {
   parentId?: number | null;
 };
 
+export type WorkItemLabelLanguage = "de" | "en";
+
 export type WorkItemDisplay = {
   projectName: string;
   taskName: string;
 };
 
-export function displayWorkItem(workItemId: number, workItems: WorkItemNode[]): WorkItemDisplay {
+const reservedWorkItemLabels: Record<string, Record<WorkItemLabelLanguage, string>> = {
+  "@": {
+    de: "Abwesenheiten",
+    en: "Absences"
+  },
+  "@break": {
+    de: "Pause",
+    en: "Break"
+  },
+  "@overtime": {
+    de: "Überstundenausgleich",
+    en: "Overtime compensation"
+  },
+  "@public_holiday": {
+    de: "Feiertag",
+    en: "Public holiday"
+  },
+  "@sick_leave": {
+    de: "Krankheit",
+    en: "Sick leave"
+  },
+  "@vacation": {
+    de: "Urlaub",
+    en: "Vacation"
+  }
+};
+
+export function displayWorkItem(workItemId: number, workItems: WorkItemNode[], language: WorkItemLabelLanguage = "de"): WorkItemDisplay {
   const path = workItemPath(workItemId, workItems);
   if (!path.length) {
     return {
@@ -20,9 +49,17 @@ export function displayWorkItem(workItemId: number, workItems: WorkItemNode[]): 
   }
 
   return {
-    projectName: path[0]?.name ?? "Default",
-    taskName: path[1]?.name ?? ""
+    projectName: labelWorkItemName(path[0]?.name ?? "Default", language),
+    taskName: path[1] ? labelWorkItemName(path[1].name, language) : ""
   };
+}
+
+export function labelWorkItemName(name: string, language: WorkItemLabelLanguage = "de"): string {
+  return reservedWorkItemLabels[name]?.[language] ?? name;
+}
+
+export function isReservedAbsenceWorkItemName(name: string): boolean {
+  return name === "@" || name.startsWith("@");
 }
 
 export function workItemPath(workItemId: number, workItems: WorkItemNode[]): WorkItemNode[] {

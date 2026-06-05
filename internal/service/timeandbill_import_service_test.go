@@ -96,6 +96,101 @@ func TestTimeAndBillImportDryRunRequiresConfirmationForProjectNameMatch(t *testi
 	}
 }
 
+func TestTimeAndBillImportPreviewReportsConflictingTimeEntries(t *testing.T) {
+	database, personID := setupImportTestDB(t)
+	createImportTestLocalEntry(t, database, personID, time.Date(2026, 3, 26, 9, 30, 0, 0, time.UTC).Unix(), time.Date(2026, 3, 26, 9, 45, 0, 0, time.UTC).Unix())
+
+	importer := NewTimeAndBillImportService(database)
+	preview, err := importer.Preview(personID, testTimeAndBillExport(), TimeAndBillImportOptions{SkipConflicting: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if preview.Summary.TimeEntryConflicts != 1 || preview.Summary.TimeEntriesCreated != 0 {
+		t.Fatalf("expected one conflict and no created entries, got %#v", preview.Summary)
+	}
+	if len(preview.Conflicts) != 1 {
+		t.Fatalf("expected one conflict detail, got %#v", preview.Conflicts)
+	}
+	if preview.Conflicts[0].ProjectName != "Project A" || preview.Conflicts[0].TaskName != "Task A" {
+		t.Fatalf("expected project/task names in conflict, got %#v", preview.Conflicts[0])
+	}
+}
+
+func TestTimeAndBillImportSkipsConflictingTimeEntries(t *testing.T) {
+	database, personID := setupImportTestDB(t)
+	createImportTestLocalEntry(t, database, personID, time.Date(2026, 3, 26, 9, 30, 0, 0, time.UTC).Unix(), time.Date(2026, 3, 26, 9, 45, 0, 0, time.UTC).Unix())
+
+	importer := NewTimeAndBillImportService(database)
+	summary, err := importer.Import(personID, testTimeAndBillExport(), TimeAndBillImportOptions{
+		AssumeYes:       true,
+		SkipConflicting: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if summary.TimeEntryConflicts != 1 || summary.TimeEntriesCreated != 0 {
+		t.Fatalf("expected conflicting import row to be skipped, got %#v", summary)
+	}
+	assertCount(t, database, `SELECT count(*) FROM time_entries`, 1)
+	assertCount(t, database, `SELECT count(*) FROM external_mappings WHERE local_table = 'time_entries'`, 0)
+}
+
+func TestTimeAndBillImportCompletedTasksAsArchived(t *testing.T) {
+	database, personID := setupImportTestDB(t)
+	payload := testTimeAndBillExport()
+	payload.Tasks[0].Complete = true
+
+	importer := NewTimeAndBillImportService(database)
+	if _, err := importer.Import(personID, payload, TimeAndBillImportOptions{AssumeYes: true}); err != nil {
+		t.Fatal(err)
+	}
+
+	var status string
+	if err := database.QueryRow(`SELECT status FROM workitems WHERE name = 'Task A'`).Scan(&status); err != nil {
+		t.Fatal(err)
+	}
+	if status != "ARCHIVED" {
+		t.Fatalf("expected completed task to import as ARCHIVED, got %q", status)
+	}
+	active, err := repo.NewWorkItemRepo(database).ListActive(personID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range active {
+		if item.Name == "Task A" {
+			t.Fatalf("expected completed imported task to be hidden from active work items: %#v", active)
+		}
+	}
+}
+
+func TestTimeAndBillImportArchivesTasksForInactiveProjects(t *testing.T) {
+	database, personID := setupImportTestDB(t)
+	payload := testTimeAndBillExport()
+	payload.Projects[0].Active = false
+	payload.Tasks[0].Active = true
+	payload.Tasks[0].Complete = false
+
+	importer := NewTimeAndBillImportService(database)
+	if _, err := importer.Import(personID, payload, TimeAndBillImportOptions{AssumeYes: true}); err != nil {
+		t.Fatal(err)
+	}
+
+	var projectStatus string
+	if err := database.QueryRow(`SELECT status FROM workitems WHERE name = 'Project A'`).Scan(&projectStatus); err != nil {
+		t.Fatal(err)
+	}
+	if projectStatus != "ARCHIVED" {
+		t.Fatalf("expected inactive project to import as ARCHIVED, got %q", projectStatus)
+	}
+	var taskStatus string
+	if err := database.QueryRow(`SELECT status FROM workitems WHERE name = 'Task A'`).Scan(&taskStatus); err != nil {
+		t.Fatal(err)
+	}
+	if taskStatus != "ARCHIVED" {
+		t.Fatalf("expected task under inactive project to import as ARCHIVED, got %q", taskStatus)
+	}
+}
+
 func setupImportTestDB(t *testing.T) (*sql.DB, int64) {
 	t.Helper()
 	database, err := sql.Open("sqlite", "file::memory:?cache=shared")
@@ -116,6 +211,32 @@ func setupImportTestDB(t *testing.T) (*sql.DB, int64) {
 		t.Fatal(err)
 	}
 	return database, personID
+}
+
+func createImportTestLocalEntry(t *testing.T, database *sql.DB, personID int64, start int64, end int64) {
+	t.Helper()
+	workItems := repo.NewWorkItemRepo(database)
+	item, err := workItems.Create(repo.CreateWorkItemParams{
+		PersonID: personID,
+		UUID:     "local-work",
+		Name:     "Local Work",
+		Created:  1774512000,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	duration := end - start
+	if _, err := repo.NewTimeEntryRepo(database).CreateCompleted(model.TimeEntry{
+		UUID:       "local-time",
+		PersonID:   personID,
+		WorkItemID: &item.ID,
+		StartTime:  start,
+		EndTime:    &end,
+		Duration:   &duration,
+		CreatedAt:  1774512000,
+	}); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func testTimeAndBillExport() timeAndBillExport {

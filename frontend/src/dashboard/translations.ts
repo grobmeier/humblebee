@@ -17,6 +17,47 @@ export const translations = {
       projects: "Projekte",
       reports: "Berichte"
     },
+    databasePage: {
+      createNew: "Neue Datenbank erstellen",
+      createNewHint: "Lege eine neue lokale HumbleBee-Datenbankdatei an.",
+      current: "Aktuelle Datenbank",
+      defaultPath: "Standarddatenbank",
+      openExisting: "Andere Datenbank oeffnen",
+      openExistingHint: "Waehle eine vorhandene HumbleBee-Datenbankdatei.",
+      switchButton: "Datenbank wechseln",
+      switchWarning: "",
+      title: "Datenbank wechseln",
+      useDefault: "Standard verwenden"
+    },
+    importPage: {
+      alreadyImported: "Dieser Time & Bill-Export wurde bereits importiert.",
+      chooseFile: "Datei waehlen",
+      completed: "Import abgeschlossen.",
+      conflictDetails: "{count} Konflikt(e) anzeigen",
+      conflicts: "Konflikte",
+      created: "Angelegt",
+      existingTimeWarning: "Diese Datenbank enthaelt bereits {count} gebuchte Zeiteintraege. HumbleBee ueberschreibt keine vorhandenen Zeiten; ueberschneidende importierte Zeiten werden uebersprungen.",
+      exportedAt: "Exportiert am",
+      exportUuid: "Export UUID",
+      file: "Exportdatei",
+      importAction: "Importieren",
+      importing: "Importiert...",
+      importButton: "Time & Bill importieren",
+      mapped: "Bestehend",
+      noFileSelected: "Keine Datei ausgewaehlt",
+      preview: "Vorschau",
+      previewing: "Prueft...",
+      projects: "Projekte",
+      skipped: "Uebersprungen",
+      sourceUser: "Benutzer",
+      tasks: "Aufgaben",
+      timeEntries: "Zeiten",
+      title: "Time & Bill importieren",
+      wouldConflict: "Konflikt",
+      wouldCreate: "Anlegen",
+      wouldMap: "Bestehend",
+      wouldSkip: "Ueberspringen"
+    },
     placeholders: {
       reports: {
         eyebrow: "Noch nicht fertig",
@@ -81,8 +122,23 @@ export const translations = {
       createStopwatch: "Stoppuhr anlegen",
       discardRunning: "Stoppuhr verwerfen",
       discardRunningConfirm: "Die Stoppuhr wird geloescht und nicht gebucht. Fortfahren?",
+      selectWorkItem: "Stoppuhr-Aufgabe",
       start: "Starten",
       stopStopwatch: "Stoppen"
+    },
+    timeEntryModal: {
+      conflictMessage: "Die Stoppuhr ueberschneidet sich mit bereits gebuchter Zeit. Passe den Zeitraum an und speichere den Eintrag.",
+      end: "Ende",
+      note: "Notiz",
+      project: "Projekt",
+      save: "Speichern",
+      saving: "Speichern...",
+      selectProjectRequired: "Bitte waehle ein Projekt aus.",
+      selectTaskRequired: "Bitte waehle eine Taetigkeit aus.",
+      start: "Start",
+      task: "Taetigkeit",
+      title: "Zeiteintrag erfassen",
+      untilMidnight: "Bis Mitternacht?"
     }
   },
   en: {
@@ -100,6 +156,47 @@ export const translations = {
       dashboard: "Dashboard",
       projects: "Projects",
       reports: "Reports"
+    },
+    databasePage: {
+      createNew: "Create New Database",
+      createNewHint: "Create a new local HumbleBee database file.",
+      current: "Current database",
+      defaultPath: "Default database",
+      openExisting: "Open Another Database",
+      openExistingHint: "Choose an existing HumbleBee database file.",
+      switchButton: "Switch database",
+      switchWarning: "",
+      title: "Switch Database",
+      useDefault: "Use default"
+    },
+    importPage: {
+      alreadyImported: "This Time & Bill export has already been imported.",
+      chooseFile: "Choose file",
+      completed: "Import completed.",
+      conflictDetails: "Show {count} conflict(s)",
+      conflicts: "Conflicts",
+      created: "Created",
+      existingTimeWarning: "This database already contains {count} booked time entries. HumbleBee will not overwrite existing time; overlapping imported time will be skipped.",
+      exportedAt: "Exported at",
+      exportUuid: "Export UUID",
+      file: "Export file",
+      importAction: "Import",
+      importing: "Importing...",
+      importButton: "Import Time & Bill",
+      mapped: "Existing",
+      noFileSelected: "No file selected",
+      preview: "Preview",
+      previewing: "Previewing...",
+      projects: "Projects",
+      skipped: "Skipped",
+      sourceUser: "User",
+      tasks: "Tasks",
+      timeEntries: "Time entries",
+      title: "Import Time & Bill",
+      wouldConflict: "Conflict",
+      wouldCreate: "Create",
+      wouldMap: "Existing",
+      wouldSkip: "Skip"
     },
     placeholders: {
       reports: {
@@ -165,8 +262,23 @@ export const translations = {
       createStopwatch: "Create stopwatch",
       discardRunning: "Discard stopwatch",
       discardRunningConfirm: "The stopwatch will be deleted and not booked. Continue?",
+      selectWorkItem: "Stopwatch task",
       start: "Start",
       stopStopwatch: "Stop"
+    },
+    timeEntryModal: {
+      conflictMessage: "The stopwatch overlaps with booked time. Adjust the time range and save the entry.",
+      end: "End",
+      note: "Note",
+      project: "Project",
+      save: "Save",
+      saving: "Saving...",
+      selectProjectRequired: "Select a project.",
+      selectTaskRequired: "Select a task.",
+      start: "Start",
+      task: "Task",
+      title: "Record time entry",
+      untilMidnight: "Until midnight?"
     }
   }
 } satisfies Record<Language, {
@@ -184,6 +296,47 @@ export const translations = {
     dashboard: string;
     projects: string;
     reports: string;
+  };
+  databasePage: {
+    createNew: string;
+    createNewHint: string;
+    current: string;
+    defaultPath: string;
+    openExisting: string;
+    openExistingHint: string;
+    switchButton: string;
+    switchWarning: string;
+    title: string;
+    useDefault: string;
+  };
+  importPage: {
+    alreadyImported: string;
+    chooseFile: string;
+    completed: string;
+    conflictDetails: string;
+    conflicts: string;
+    created: string;
+    existingTimeWarning: string;
+    exportedAt: string;
+    exportUuid: string;
+    file: string;
+    importAction: string;
+    importing: string;
+    importButton: string;
+    mapped: string;
+    noFileSelected: string;
+    preview: string;
+    previewing: string;
+    projects: string;
+    skipped: string;
+    sourceUser: string;
+    tasks: string;
+    timeEntries: string;
+    title: string;
+    wouldConflict: string;
+    wouldCreate: string;
+    wouldMap: string;
+    wouldSkip: string;
   };
   placeholders: {
     reports: {
@@ -249,7 +402,25 @@ export const translations = {
     book: string;
     discardRunning: string;
     discardRunningConfirm: string;
+    selectWorkItem: string;
     start: string;
     stopStopwatch: string;
   };
+  timeEntryModal: {
+    conflictMessage: string;
+    end: string;
+    note: string;
+    project: string;
+    save: string;
+    saving: string;
+    selectProjectRequired: string;
+    selectTaskRequired: string;
+    start: string;
+    task: string;
+    title: string;
+    untilMidnight: string;
+  };
 }>;
+
+export type DatabasePageText = typeof translations.en.databasePage;
+export type ImportPageText = typeof translations.en.importPage;

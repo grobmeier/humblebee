@@ -1,12 +1,15 @@
+import type { DateLanguage } from "../dashboard/dateFormat";
+import { labelWorkItemName } from "../dashboard/workItemUtils";
 import { isActiveTask, type ProjectsPageText, type WorkItem } from "./projectTypes";
 
 type ProjectTaskRowProps = {
+  language: DateLanguage;
   task: WorkItem;
   t: ProjectsPageText;
   onToggleCompleted: (task: WorkItem, completed: boolean) => void;
 };
 
-export function ProjectTaskRow({ task, t, onToggleCompleted }: ProjectTaskRowProps) {
+export function ProjectTaskRow({ language, task, t, onToggleCompleted }: ProjectTaskRowProps) {
   const completed = !isActiveTask(task);
 
   return (
@@ -19,7 +22,7 @@ export function ProjectTaskRow({ task, t, onToggleCompleted }: ProjectTaskRowPro
           aria-label={t.completedTask}
         />
         <span>
-          <strong>{task.name}</strong>
+          <strong>{labelWorkItemName(task.name, language)}</strong>
         </span>
       </label>
     </div>
