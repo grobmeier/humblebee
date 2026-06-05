@@ -268,9 +268,12 @@ code {
   border-radius: 7px;
   background: #0a85c5;
   color: #fff;
-  font-size: 22px;
-  font-weight: 800;
-  line-height: 1;
+}
+
+.brand-mark svg {
+  display: block;
+  width: 29px;
+  height: 29px;
 }
 
 .primary-nav {

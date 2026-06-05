@@ -30,6 +30,7 @@ import { formatInputDate, formatTime } from "./dashboard/dateFormat";
 import { TimeEntryModal } from "./dashboard/TimeEntryModal";
 import type { TimeEntryFormState } from "./dashboard/timeEntryTypes";
 import { type Language, translations } from "./dashboard/translations";
+import { HumbleBeeLogo } from "./components/HumbleBeeLogo";
 import { ProjectsPage } from "./projects/ProjectsPage";
 import { ReportsPage } from "./reports/ReportsPage";
 import { reportSlugFromHash } from "./reports/reportUtils";
@@ -553,7 +554,7 @@ export default function App() {
     <main className="app-shell">
       <header className="topbar">
         <div className="brand-mark" aria-hidden="true">
-          ↻
+          <HumbleBeeLogo />
         </div>
         <nav className="primary-nav" aria-label="Primary">
           <a className={activePage === "dashboard" ? "selected" : ""} href="#dashboard">{t.nav.dashboard}</a>
