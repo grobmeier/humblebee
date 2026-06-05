@@ -307,6 +307,7 @@ func (s *TimeAndBillImportService) apply(tx *sql.Tx, personID int64, payload tim
 
 	projectIDs := map[string]int64{}
 	projectDepths := map[string]int{}
+	projectStatuses := map[string]model.WorkItemStatus{}
 	for _, project := range payload.Projects {
 		parentID := (*int64)(nil)
 		depth := 0
@@ -326,6 +327,7 @@ func (s *TimeAndBillImportService) apply(tx *sql.Tx, personID int64, payload tim
 		}
 		projectIDs[project.UUID] = id
 		projectDepths[project.UUID] = depth
+		projectStatuses[project.UUID] = status
 		if created {
 			summary.ProjectsCreated++
 		} else if mapped {
@@ -342,7 +344,7 @@ func (s *TimeAndBillImportService) apply(tx *sql.Tx, personID int64, payload tim
 			return fmt.Errorf("task %q references unknown project UUID %q", task.Name, task.ProjectUUID)
 		}
 		status := model.WorkItemStatusActive
-		if !task.Active || task.Complete {
+		if projectStatuses[task.ProjectUUID] != model.WorkItemStatusActive || !task.Active || task.Complete {
 			status = model.WorkItemStatusArchived
 		}
 		id, created, mapped, err := s.ensureWorkItem(tx, personID, task.UUID, task.Name, &projectID, projectDepths[task.ProjectUUID]+1, status, options, false)

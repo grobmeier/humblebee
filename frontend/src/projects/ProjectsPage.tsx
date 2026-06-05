@@ -3,9 +3,11 @@ import { ProjectDeleteModal } from "./ProjectDeleteModal";
 import { ProjectDetail } from "./ProjectDetail";
 import { ProjectNameModal } from "./ProjectNameModal";
 import { ProjectsList } from "./ProjectsList";
+import type { DateLanguage } from "../dashboard/dateFormat";
 import { isActiveTask, type ProjectModalState, type ProjectsPageText, type WorkItem } from "./projectTypes";
 
 type ProjectsPageProps = {
+  language: DateLanguage;
   selectedProjectId: number;
   t: ProjectsPageText;
   workItems: WorkItem[];
@@ -18,6 +20,7 @@ type ProjectsPageProps = {
 };
 
 export function ProjectsPage({
+  language,
   selectedProjectId,
   t,
   workItems,
@@ -39,6 +42,7 @@ export function ProjectsPage({
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showHiddenTasks, setShowHiddenTasks] = useState(false);
+  const hasHiddenTasks = tasks.some((task) => !isActiveTask(task));
   const visibleTasks = showHiddenTasks ? tasks : tasks.filter(isActiveTask);
 
   useEffect(() => {
@@ -46,6 +50,16 @@ export function ProjectsPage({
       onSelectProject(projects[0].id);
     }
   }, [onSelectProject, projects, selectedProject]);
+
+  useEffect(() => {
+    setShowHiddenTasks(false);
+  }, [selectedProject?.id]);
+
+  useEffect(() => {
+    if (!hasHiddenTasks && showHiddenTasks) {
+      setShowHiddenTasks(false);
+    }
+  }, [hasHiddenTasks, showHiddenTasks]);
 
   function openCreateProjectModal() {
     setModal({ type: "create-project" });
@@ -141,6 +155,7 @@ export function ProjectsPage({
   return (
     <section className="projects-page" id="projects">
       <ProjectsList
+        language={language}
         projects={projects}
         selectedProjectId={selectedProject?.id}
         t={t}
@@ -149,7 +164,9 @@ export function ProjectsPage({
       />
       <ProjectDetail
         error={error}
+        language={language}
         selectedProject={selectedProject}
+        canToggleHiddenTasks={hasHiddenTasks}
         showHiddenTasks={showHiddenTasks}
         t={t}
         tasks={visibleTasks}

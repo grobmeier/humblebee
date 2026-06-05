@@ -491,12 +491,13 @@ export default function App() {
     setTimeEntryModalError(null);
     setIsStopwatchConfirmationModal(false);
     setConfirmationStopwatchId(null);
-    setTimeEntryForm(createTimeEntryForm(date, selectedWorkItemId));
+    const selection = timeEntrySelectionForWorkItem(selectedWorkItemId);
+    setTimeEntryForm(createTimeEntryForm(date, selection.projectId, selection.taskId));
     setIsTimeEntryModalOpen(true);
   }
 
   function onEditEntry(entry: guiapp.TimeEntry) {
-    const projectId = entry.workItemId ?? selectedWorkItemId;
+    const selection = timeEntrySelectionForWorkItem(entry.workItemId ?? selectedWorkItemId);
     setError("");
     setTimeEntryModalError(null);
     setIsStopwatchConfirmationModal(false);
@@ -506,10 +507,10 @@ export default function App() {
       endDate: entry.endDate,
       endTime: entry.endTime,
       id: entry.id,
-      projectId,
+      projectId: selection.projectId,
       startDate: entry.startDate,
       startTime: entry.startTime,
-      taskId: projectId,
+      taskId: selection.taskId,
       untilMidnight: false
     });
     setIsTimeEntryModalOpen(true);
@@ -534,8 +535,20 @@ export default function App() {
     setExpandedNoteIds((ids) => (ids.includes(entryId) ? ids.filter((id) => id !== entryId) : [...ids, entryId]));
   }
 
+  function timeEntrySelectionForWorkItem(workItemId: number): { projectId: number; taskId: number } {
+    const workItem = workItems.find((item) => item.id === workItemId);
+    if (!workItem) {
+      return { projectId: 0, taskId: 0 };
+    }
+    if (workItem.parentId != null) {
+      return { projectId: workItem.parentId, taskId: workItem.id };
+    }
+    const firstTask = workItems.find((item) => item.parentId === workItem.id);
+    return { projectId: workItem.id, taskId: firstTask?.id ?? 0 };
+  }
+
   function openStopwatchConfirmationModal(error: StopwatchOverlapError) {
-    const projectId = error.workItemId || selectedWorkItemId;
+    const selection = timeEntrySelectionForWorkItem(error.workItemId || selectedWorkItemId);
     setError("");
     setTimeEntryModalError(
       "Die Stoppuhr ueberschneidet sich mit bereits gebuchter Zeit. Passe den Zeitraum an und speichere den Eintrag."
@@ -545,10 +558,10 @@ export default function App() {
       endDate: error.endDate,
       endTime: error.endTime,
       id: undefined,
-      projectId,
+      projectId: selection.projectId,
       startDate: error.startDate,
       startTime: error.startTime,
-      taskId: projectId,
+      taskId: selection.taskId,
       untilMidnight: false
     });
     setSelectedDate(atLocalNoon(new Date(`${error.startDate}T12:00:00`)));
@@ -558,7 +571,7 @@ export default function App() {
   }
 
   function onBookStopwatch(stopwatch: guiapp.Stopwatch) {
-    const projectId = stopwatch.workItemId ?? selectedWorkItemId;
+    const selection = timeEntrySelectionForWorkItem(stopwatch.workItemId ?? selectedWorkItemId);
     setError("");
     setTimeEntryModalError(
       "Die Stoppuhr ueberschneidet sich mit bereits gebuchter Zeit. Passe den Zeitraum an und speichere den Eintrag."
@@ -568,10 +581,10 @@ export default function App() {
       endDate: stopwatch.endDate,
       endTime: stopwatch.endTime,
       id: undefined,
-      projectId,
+      projectId: selection.projectId,
       startDate: stopwatch.startDate,
       startTime: stopwatch.startTime,
-      taskId: projectId,
+      taskId: selection.taskId,
       untilMidnight: false
     });
     setSelectedDate(atLocalNoon(new Date(`${stopwatch.startDate}T12:00:00`)));
@@ -588,13 +601,17 @@ export default function App() {
       setTimeEntryModalError("Bitte waehle ein Projekt aus.");
       return;
     }
+    if (!timeEntryForm.taskId) {
+      setTimeEntryModalError("Bitte waehle eine Taetigkeit aus.");
+      return;
+    }
 
     setIsSavingTimeEntry(true);
     try {
       const savedDate = atLocalNoon(new Date(`${timeEntryForm.startDate}T12:00:00`));
       const payload = {
         id: timeEntryForm.id ?? 0,
-        workItemId: timeEntryForm.projectId,
+        workItemId: timeEntryForm.taskId,
         description: timeEntryForm.description,
         startDate: timeEntryForm.startDate,
         startTime: timeEntryForm.startTime,
@@ -610,7 +627,7 @@ export default function App() {
       if (isStopwatchConfirmationModal && confirmationStopwatchId !== null) {
         await DiscardStopwatch(confirmationStopwatchId);
       }
-      setSelectedWorkItemId(timeEntryForm.projectId);
+      setSelectedWorkItemId(timeEntryForm.taskId);
       setSelectedDate(savedDate);
       await refreshTimeDay(savedDate);
       await refresh();
@@ -738,6 +755,7 @@ export default function App() {
                 <TimeEntriesEmptyState
                   entries={timeDay?.entries ?? []}
                   expandedNoteIds={expandedNoteIds}
+                  language={language}
                   workItems={workItems}
                   onDeleteEntry={onDeleteEntry}
                   onEditEntry={onEditEntry}
@@ -765,6 +783,7 @@ export default function App() {
         ) : null}
         {activePage === "projects" ? (
           <ProjectsPage
+            language={language}
             selectedProjectId={selectedProjectPageProjectId}
             t={t.projectsPage}
             workItems={projectWorkItems}
@@ -860,7 +879,7 @@ function formatTimeEntryError(error: unknown): string {
   return message;
 }
 
-function createTimeEntryForm(date: Date, projectId: number): TimeEntryFormState {
+function createTimeEntryForm(date: Date, projectId: number, taskId = 0): TimeEntryFormState {
   const start = atLocalNoon(date);
   start.setHours(9, 0, 0, 0);
   const end = atLocalNoon(date);
@@ -874,7 +893,7 @@ function createTimeEntryForm(date: Date, projectId: number): TimeEntryFormState 
     projectId,
     startDate: formattedDate,
     startTime: formatTime(start),
-    taskId: projectId,
+    taskId,
     untilMidnight: false
   };
 }

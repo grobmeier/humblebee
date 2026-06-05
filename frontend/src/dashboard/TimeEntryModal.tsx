@@ -2,9 +2,9 @@ import { useEffect, useRef, useState, type FormEventHandler } from "react";
 import { FormRow, Modal } from "../components/Modal";
 import { flatpickrDateFormat, formatDisplayDate, parseDisplayDate, type DateLanguage } from "./dateFormat";
 import type { TimeEntryFormState } from "./timeEntryTypes";
-import { displayWorkItem } from "./workItemUtils";
+import { labelWorkItemName } from "./workItemUtils";
 
-type WorkItem = { id: number; name: string; depth: number };
+type WorkItem = { id: number; name: string; parentId?: number | null; depth: number; status?: string };
 
 type TimeEntryModalProps = {
   error: string | null;
@@ -31,7 +31,8 @@ declare global {
 }
 
 export function TimeEntryModal({ error, form, isSaving, language, onChange, onClose, onSubmit, workItems }: TimeEntryModalProps) {
-  const selectedWorkItem = displayWorkItem(form.projectId, workItems);
+  const projects = workItems.filter((workItem) => workItem.parentId == null);
+  const tasks = workItems.filter((workItem) => workItem.parentId === form.projectId);
 
   return (
     <Modal
@@ -39,7 +40,7 @@ export function TimeEntryModal({ error, form, isSaving, language, onChange, onCl
       onClose={onClose}
       onSubmit={onSubmit}
       footer={
-        <button className="primary-button modal-submit-button" type="submit" disabled={isSaving || !form.projectId}>
+        <button className="primary-button modal-submit-button" type="submit" disabled={isSaving || !form.projectId || !form.taskId}>
           {isSaving ? "Speichern..." : "Speichern"}
         </button>
       }
@@ -97,21 +98,34 @@ export function TimeEntryModal({ error, form, isSaving, language, onChange, onCl
         <select
           className="tab-form-control"
           value={form.projectId}
-          onChange={(event) => onChange({ ...form, projectId: Number(event.target.value), taskId: Number(event.target.value) })}
+          onChange={(event) => {
+            const projectId = Number(event.target.value);
+            const firstTask = workItems.find((workItem) => workItem.parentId === projectId);
+            onChange({ ...form, projectId, taskId: firstTask?.id ?? 0 });
+          }}
         >
           <option value={0}></option>
-          {workItems.map((workItem) => (
+          {projects.map((workItem) => (
             <option key={workItem.id} value={workItem.id}>
-              {"- ".repeat(Math.max(0, workItem.depth))}
-              {workItem.name}
+              {labelWorkItemName(workItem.name, language)}
             </option>
           ))}
         </select>
       </FormRow>
 
       <FormRow label="Taetigkeit">
-        <select className="tab-form-control" value={form.taskId} onChange={(event) => onChange({ ...form, taskId: Number(event.target.value) })}>
-          <option value={form.projectId}>{selectedWorkItem.taskName || selectedWorkItem.projectName}</option>
+        <select
+          className="tab-form-control"
+          value={form.taskId}
+          disabled={!form.projectId || tasks.length === 0}
+          onChange={(event) => onChange({ ...form, taskId: Number(event.target.value) })}
+        >
+          <option value={0}></option>
+          {tasks.map((task) => (
+            <option key={task.id} value={task.id}>
+              {labelWorkItemName(task.name, language)}
+            </option>
+          ))}
         </select>
       </FormRow>
 

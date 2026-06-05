@@ -2,6 +2,7 @@ import { EditIcon, EyeIcon, TrashIcon } from "./ProjectIcons";
 import type { ProjectsPageText } from "./projectTypes";
 
 type ProjectActionsProps = {
+  canToggleHiddenTasks: boolean;
   showHiddenTasks: boolean;
   t: ProjectsPageText;
   onAddTask: () => void;
@@ -11,6 +12,7 @@ type ProjectActionsProps = {
 };
 
 export function ProjectActions({
+  canToggleHiddenTasks,
   showHiddenTasks,
   t,
   onAddTask,
@@ -21,8 +23,9 @@ export function ProjectActions({
   return (
     <div className="project-detail-actions">
       <button
-        className={`icon-button eye-button ${showHiddenTasks ? "active" : ""}`}
+        className={`icon-button eye-button ${showHiddenTasks && canToggleHiddenTasks ? "active" : ""}`}
         type="button"
+        disabled={!canToggleHiddenTasks}
         onClick={onToggleHiddenTasks}
         aria-label={t.showHiddenTasks}
         title={t.showHiddenTasks}

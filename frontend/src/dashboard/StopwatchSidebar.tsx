@@ -1,7 +1,7 @@
 import { formatDisplayDate, type DateLanguage } from "./dateFormat";
-import { displayWorkItem } from "./workItemUtils";
+import { displayWorkItem, isReservedAbsenceWorkItemName, labelWorkItemName, workItemPath } from "./workItemUtils";
 
-type WorkItem = { id: number; name: string; parentId?: number | null; depth: number };
+type WorkItem = { id: number; name: string; parentId?: number | null; depth: number; status?: string };
 
 type Stopwatch = {
   durationSeconds: number;
@@ -51,10 +51,15 @@ export function StopwatchSidebar({
 }: StopwatchSidebarProps) {
   const openWorkItemIds = new Set(stopwatches.map((stopwatch) => stopwatch.workItemId ?? 0));
   const availableWorkItems = workItems.filter(
-    (workItem) => workItem.name.toLowerCase() !== "default" && !openWorkItemIds.has(workItem.id)
+    (workItem) =>
+      isActiveWorkItem(workItem) &&
+      workItem.name.toLowerCase() !== "default" &&
+      !isReservedAbsenceWorkItemName(workItem.name) &&
+      !openWorkItemIds.has(workItem.id)
   );
   const selectedWorkItemAvailable = selectedWorkItemId === 0 || availableWorkItems.some((workItem) => workItem.id === selectedWorkItemId);
   const selectedValue = selectedWorkItemAvailable ? selectedWorkItemId : 0;
+  const groupedWorkItems = groupWorkItemsForStopwatch(availableWorkItems, workItems, language);
 
   return (
     <aside className="stopwatch-panel">
@@ -62,10 +67,19 @@ export function StopwatchSidebar({
         <h2>{t.createStopwatch}</h2>
         <select value={selectedValue} onChange={(event) => onSelectWorkItem(Number(event.target.value))} aria-label="Stoppuhr Work item">
           <option value={0}></option>
-          {availableWorkItems.map((workItem) => (
+          {groupedWorkItems.ungrouped.map((workItem) => (
             <option key={workItem.id} value={workItem.id}>
-              {formatWorkItemOption(workItem, workItems)}
+              {formatWorkItemOption(workItem, workItems, language)}
             </option>
+          ))}
+          {groupedWorkItems.groups.map((group) => (
+            <optgroup key={group.project.id} label={labelWorkItemName(group.project.name, language)}>
+              {group.items.map((workItem) => (
+                <option key={workItem.id} value={workItem.id}>
+                  {formatGroupedWorkItemOption(workItem, workItems, language)}
+                </option>
+              ))}
+            </optgroup>
           ))}
         </select>
         <div className="timer-actions">
@@ -76,7 +90,7 @@ export function StopwatchSidebar({
       </div>
 
       {stopwatches.map((stopwatch) => {
-        const display = displayWorkItem(stopwatch.workItemId ?? 0, workItems);
+        const display = displayWorkItem(stopwatch.workItemId ?? 0, workItems, language);
         const projectName = display.projectName === "Default" && stopwatch.workItemName ? stopwatch.workItemName : display.projectName;
         return (
           <div
@@ -124,12 +138,82 @@ export function StopwatchSidebar({
   );
 }
 
-function formatWorkItemOption(workItem: WorkItem, workItems: WorkItem[]): string {
-  const display = displayWorkItem(workItem.id, workItems);
+function isActiveWorkItem(workItem: WorkItem): boolean {
+  return (workItem.status ?? "ACTIVE") === "ACTIVE";
+}
+
+type StopwatchWorkItemGroup = {
+  project: WorkItem;
+  items: WorkItem[];
+};
+
+function groupWorkItemsForStopwatch(availableWorkItems: WorkItem[], allWorkItems: WorkItem[], language: DateLanguage): { groups: StopwatchWorkItemGroup[]; ungrouped: WorkItem[] } {
+  const availableByID = new Map(availableWorkItems.map((workItem) => [workItem.id, workItem]));
+  const projectChildren = new Map<number, WorkItem[]>();
+  const ungrouped: WorkItem[] = [];
+
+  for (const workItem of availableWorkItems) {
+    const path = workItemPath(workItem.id, allWorkItems);
+    const project = path[0];
+    if (!project || project.id === workItem.id) {
+      continue;
+    }
+    const existing = projectChildren.get(project.id) ?? [];
+    existing.push(workItem);
+    projectChildren.set(project.id, existing);
+  }
+
+  for (const workItem of availableWorkItems) {
+    const path = workItemPath(workItem.id, allWorkItems);
+    const project = path[0];
+    if (!project) {
+      ungrouped.push(workItem);
+      continue;
+    }
+    if (project.id !== workItem.id) {
+      continue;
+    }
+    if (!projectChildren.has(workItem.id)) {
+      ungrouped.push(workItem);
+    }
+  }
+
+  const groups = Array.from(projectChildren.entries())
+    .map(([projectID, items]) => {
+      const project = availableByID.get(projectID) ?? allWorkItems.find((workItem) => workItem.id === projectID);
+      return project ? { project, items: sortWorkItemsByLabel(items, language) } : null;
+    })
+    .filter((group): group is StopwatchWorkItemGroup => group !== null)
+    .sort((a, b) => compareWorkItemLabels(a.project, b.project, language));
+
+  return {
+    groups,
+    ungrouped: sortWorkItemsByLabel(ungrouped, language)
+  };
+}
+
+function formatWorkItemOption(workItem: WorkItem, workItems: WorkItem[], language: DateLanguage): string {
+  const display = displayWorkItem(workItem.id, workItems, language);
   if (display.taskName) {
     return `${display.projectName} - ${display.taskName}`;
   }
   return display.projectName;
+}
+
+function formatGroupedWorkItemOption(workItem: WorkItem, workItems: WorkItem[], language: DateLanguage): string {
+  const path = workItemPath(workItem.id, workItems);
+  if (path.length <= 1) {
+    return labelWorkItemName(workItem.name, language);
+  }
+  return path.slice(1).map((pathItem) => labelWorkItemName(pathItem.name, language)).join(" - ");
+}
+
+function sortWorkItemsByLabel(workItems: WorkItem[], language: DateLanguage): WorkItem[] {
+  return [...workItems].sort((a, b) => compareWorkItemLabels(a, b, language));
+}
+
+function compareWorkItemLabels(a: WorkItem, b: WorkItem, language: DateLanguage): number {
+  return labelWorkItemName(a.name, language).localeCompare(labelWorkItemName(b.name, language), language);
 }
 
 function formatStopwatchDuration(stopwatch: Stopwatch, nowTimestamp: number): string {

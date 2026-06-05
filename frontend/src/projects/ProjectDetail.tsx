@@ -1,9 +1,13 @@
 import { ProjectActions } from "./ProjectActions";
 import { ProjectTaskList } from "./ProjectTaskList";
+import type { DateLanguage } from "../dashboard/dateFormat";
+import { labelWorkItemName } from "../dashboard/workItemUtils";
 import type { ProjectsPageText, WorkItem } from "./projectTypes";
 
 type ProjectDetailProps = {
+  canToggleHiddenTasks: boolean;
   error: string | null;
+  language: DateLanguage;
   selectedProject: WorkItem | null;
   showHiddenTasks: boolean;
   t: ProjectsPageText;
@@ -16,7 +20,9 @@ type ProjectDetailProps = {
 };
 
 export function ProjectDetail({
+  canToggleHiddenTasks,
   error,
+  language,
   selectedProject,
   showHiddenTasks,
   t,
@@ -39,9 +45,10 @@ export function ProjectDetail({
     <section className="project-detail-panel">
       <div className="project-detail-header">
         <div>
-          <h1>{selectedProject.name}</h1>
+          <h1>{labelWorkItemName(selectedProject.name, language)}</h1>
         </div>
         <ProjectActions
+          canToggleHiddenTasks={canToggleHiddenTasks}
           showHiddenTasks={showHiddenTasks}
           t={t}
           onAddTask={() => onAddTask(selectedProject)}
@@ -53,7 +60,7 @@ export function ProjectDetail({
 
       {error ? <div className="errors alert alert-error">{error}</div> : null}
 
-      <ProjectTaskList tasks={tasks} t={t} onToggleCompleted={onToggleTaskCompleted} />
+      <ProjectTaskList language={language} tasks={tasks} t={t} onToggleCompleted={onToggleTaskCompleted} />
     </section>
   );
 }

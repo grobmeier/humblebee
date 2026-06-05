@@ -163,6 +163,34 @@ func TestTimeAndBillImportCompletedTasksAsArchived(t *testing.T) {
 	}
 }
 
+func TestTimeAndBillImportArchivesTasksForInactiveProjects(t *testing.T) {
+	database, personID := setupImportTestDB(t)
+	payload := testTimeAndBillExport()
+	payload.Projects[0].Active = false
+	payload.Tasks[0].Active = true
+	payload.Tasks[0].Complete = false
+
+	importer := NewTimeAndBillImportService(database)
+	if _, err := importer.Import(personID, payload, TimeAndBillImportOptions{AssumeYes: true}); err != nil {
+		t.Fatal(err)
+	}
+
+	var projectStatus string
+	if err := database.QueryRow(`SELECT status FROM workitems WHERE name = 'Project A'`).Scan(&projectStatus); err != nil {
+		t.Fatal(err)
+	}
+	if projectStatus != "ARCHIVED" {
+		t.Fatalf("expected inactive project to import as ARCHIVED, got %q", projectStatus)
+	}
+	var taskStatus string
+	if err := database.QueryRow(`SELECT status FROM workitems WHERE name = 'Task A'`).Scan(&taskStatus); err != nil {
+		t.Fatal(err)
+	}
+	if taskStatus != "ARCHIVED" {
+		t.Fatalf("expected task under inactive project to import as ARCHIVED, got %q", taskStatus)
+	}
+}
+
 func setupImportTestDB(t *testing.T) (*sql.DB, int64) {
 	t.Helper()
 	database, err := sql.Open("sqlite", "file::memory:?cache=shared")
