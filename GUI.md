@@ -4,13 +4,13 @@ This is an early GUI prototype that uses the same local SQLite database as the C
 
 ## Requirements
 
-- Go 1.21+
+- Go 1.22+
 - Node.js 18+
 - Wails v2
 
 Install Wails:
 ```bash
-go install github.com/wailsapp/wails/v2/cmd/wails@latest
+go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
 ```
 
 ## Run (development)
@@ -34,6 +34,12 @@ npm run build
 cd ..
 wails build
 ```
+
+## Release Builds
+
+GUI release assets are built by `.github/workflows/release-gui.yml` after a GitHub release is published. The CLI release remains GoReleaser-based; the GUI workflow attaches Wails app downloads to the same `v*` release.
+
+The CLI command `humblebee gui` launches an installed GUI app if one is available next to the CLI, on `PATH`, or via `HUMBLEBEE_GUI_PATH`.
 
 ## Notes
 
