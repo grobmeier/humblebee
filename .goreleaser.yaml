@@ -65,22 +65,23 @@ release:
 
 brews:
   - name: humblebee
-    homepage: "https://humblebee.work"
+    homepage: "https://www.timeandbill.de/en/humblebee/"
     description: "Local-first CLI time tracking"
+    license: "Apache-2.0"
     directory: Formula
     repository:
       owner: grobmeier
       name: homebrew-tap
       token: "{{ .Env.TAP_GITHUB_TOKEN }}"
     commit_author:
-      name: GoReleaser Bot
-      email: bot@goreleaser.com
+      name: Grobmeier Solutions GmbH
+      email: github@grobmeier.de
 
 scoops:
   - repository:
       owner: grobmeier
       name: scoop-bucket
       token: "{{ .Env.SCOOP_GITHUB_TOKEN }}"
-    homepage: "https://humblebee.work"
+    homepage: "https://www.timeandbill.de/en/humblebee/"
     description: "Local-first CLI time tracking"
-    license: ""
+    license: "Apache-2.0"
