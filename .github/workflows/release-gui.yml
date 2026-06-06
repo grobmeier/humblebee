@@ -97,7 +97,7 @@ jobs:
           Compress-Archive -Path build/bin/HumbleBee.exe -DestinationPath "release/${{ steps.release.outputs.asset_name }}"
 
       - name: Upload GUI asset
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ steps.release.outputs.tag }}
           files: release/${{ steps.release.outputs.asset_name }}
