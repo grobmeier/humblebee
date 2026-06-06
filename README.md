@@ -4,7 +4,7 @@ Local-first CLI time tracking that stays out of your way.
 
 ## Requirements
 
-- Go 1.21+
+- Go 1.22+
 - SQLite is embedded via `modernc.org/sqlite` (no CGO)
 
 ## Install (recommended)
@@ -49,13 +49,22 @@ HumbleBee also ships a local-first GUI built with Wails and React. The GUI uses 
 
 Download the UI-first app from the GitHub release assets for your operating system.
 
-If the GUI app or `humblebee-gui` binary is installed next to the CLI, on your `PATH`, or configured through `HUMBLEBEE_GUI_PATH`, you can launch it from the CLI:
+If the GUI app or `humblebee-gui` binary is installed next to the CLI, on your `PATH`, or configured through `HUMBLEBEE_GUI_PATH`, launch it from the CLI:
 
 ```bash
 humblebee gui
 ```
 
-See `GUI.md` for local development commands.
+For local GUI development, run Wails from the repository root:
+
+```bash
+cd frontend
+npm install
+cd ..
+wails dev
+```
+
+Use `humblebee gui` to test the launcher behavior after a GUI build or installed release is available. See `GUI.md` for the full GUI development notes.
 
 ## Releases
 
