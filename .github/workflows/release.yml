@@ -6,6 +6,7 @@ on:
       - "v*"
 
 permissions:
+  actions: write
   contents: write
 
 jobs:
@@ -33,3 +34,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAP_GITHUB_TOKEN: ${{ secrets.TAP_GITHUB_TOKEN }}
           SCOOP_GITHUB_TOKEN: ${{ secrets.SCOOP_GITHUB_TOKEN }}
+
+      - name: Trigger GUI release
+        run: gh workflow run release-gui.yml -f tag="${GITHUB_REF_NAME}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
