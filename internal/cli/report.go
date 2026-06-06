@@ -24,6 +24,8 @@ import (
 	"github.com/grobmeier/humblebee/internal/duration"
 	"github.com/grobmeier/humblebee/internal/service"
 	"github.com/olekukonko/tablewriter"
+	"github.com/olekukonko/tablewriter/renderer"
+	"github.com/olekukonko/tablewriter/tw"
 	"github.com/spf13/cobra"
 )
 
@@ -85,17 +87,34 @@ var reportCmd = &cobra.Command{
 
 		fmt.Println(rep.Title)
 
-		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"Work Item", "Duration", ""})
-		table.SetBorders(tablewriter.Border{Left: false, Top: false, Right: false, Bottom: false})
-		table.SetCenterSeparator("")
-		table.SetColumnSeparator("")
-		table.SetRowSeparator("")
-		table.SetHeaderLine(false)
-		table.SetBorder(false)
-		table.SetAutoWrapText(false)
-		table.SetAlignment(tablewriter.ALIGN_LEFT)
-		table.SetColumnAlignment([]int{tablewriter.ALIGN_LEFT, tablewriter.ALIGN_RIGHT, tablewriter.ALIGN_LEFT})
+		table := tablewriter.NewTable(
+			os.Stdout,
+			tablewriter.WithRenderer(renderer.NewBlueprint(tw.Rendition{
+				Borders: tw.Border{Left: tw.Off, Top: tw.Off, Right: tw.Off, Bottom: tw.Off},
+				Settings: tw.Settings{
+					Separators: tw.Separators{
+						ShowHeader:     tw.Off,
+						ShowFooter:     tw.Off,
+						BetweenRows:    tw.Off,
+						BetweenColumns: tw.Off,
+					},
+					Lines: tw.Lines{
+						ShowTop:        tw.Off,
+						ShowBottom:     tw.Off,
+						ShowHeaderLine: tw.Off,
+						ShowFooterLine: tw.Off,
+					},
+				},
+			})),
+			tablewriter.WithHeaderAutoFormat(tw.Off),
+			tablewriter.WithHeaderAutoWrap(tw.WrapNone),
+			tablewriter.WithRowAutoWrap(tw.WrapNone),
+			tablewriter.WithRowAlignmentConfig(tw.CellAlignment{
+				Global:    tw.AlignLeft,
+				PerColumn: []tw.Align{tw.AlignLeft, tw.AlignRight, tw.AlignLeft},
+			}),
+		)
+		table.Header("Work Item", "Duration", "")
 
 		for _, line := range rep.Lines {
 			name := line.Name
@@ -111,9 +130,13 @@ var reportCmd = &cobra.Command{
 			if line.Percent != nil {
 				percent = fmt.Sprintf("(%d%%)", *line.Percent)
 			}
-			table.Append([]string{name, duration.FormatSeconds(line.Seconds), percent})
+			if err := table.Append([]string{name, duration.FormatSeconds(line.Seconds), percent}); err != nil {
+				return err
+			}
 		}
-		table.Render()
+		if err := table.Render(); err != nil {
+			return err
+		}
 
 		fmt.Printf("TOTAL  %s\n", duration.FormatSeconds(rep.TotalSec))
 		fmt.Printf("\nWorking days: %d\n", rep.WorkingDays)
@@ -121,4 +144,3 @@ var reportCmd = &cobra.Command{
 		return nil
 	},
 }
-
