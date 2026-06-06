@@ -2,6 +2,10 @@ name: sbom
 
 on:
   workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to attach the SBOM to, for example v0.2.1"
+        required: false
   push:
     branches:
       - main
@@ -15,7 +19,7 @@ permissions:
 
 jobs:
   generate:
-    if: github.event_name != 'release'
+    if: github.event_name != 'release' && inputs.tag == ''
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -34,22 +38,29 @@ jobs:
           upload-release-assets: false
 
   release:
-    if: github.event_name == 'release'
+    if: github.event_name == 'release' || inputs.tag != ''
     runs-on: ubuntu-latest
     permissions:
       actions: read
       contents: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
       - name: Resolve SBOM filename
         id: sbom
         shell: bash
         run: |
-          tag="${{ github.event.release.tag_name }}"
+          if [ "${{ github.event_name }}" = "release" ]; then
+            tag="${{ github.event.release.tag_name }}"
+          else
+            tag="${{ inputs.tag }}"
+          fi
           safe_tag="${tag//\//-}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
           echo "file=HumbleBee_${safe_tag}_sbom.cdx.json" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout release tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.sbom.outputs.tag }}
 
       - name: Generate and attach CycloneDX SBOM
         uses: anchore/sbom-action@v0

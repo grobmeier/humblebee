@@ -39,3 +39,8 @@ jobs:
         run: gh workflow run release-gui.yml -f tag="${GITHUB_REF_NAME}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trigger SBOM release
+        run: gh workflow run sbom.yml -f tag="${GITHUB_REF_NAME}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
