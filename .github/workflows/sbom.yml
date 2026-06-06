@@ -43,12 +43,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Resolve SBOM filename
+        id: sbom
+        shell: bash
+        run: |
+          tag="${{ github.event.release.tag_name }}"
+          safe_tag="${tag//\//-}"
+          echo "file=HumbleBee_${safe_tag}_sbom.cdx.json" >> "$GITHUB_OUTPUT"
+
       - name: Generate and attach CycloneDX SBOM
         uses: anchore/sbom-action@v0
         with:
           path: .
           format: cyclonedx-json
-          output-file: humblebee-sbom.cdx.json
-          artifact-name: humblebee-sbom.cdx.json
+          output-file: ${{ steps.sbom.outputs.file }}
+          artifact-name: ${{ steps.sbom.outputs.file }}
           upload-artifact: true
           upload-release-assets: true

@@ -72,7 +72,7 @@ HumbleBee uses GitHub Actions for release builds.
 
 - CLI-first releases are created from `v*` tags through GoReleaser and publish the `humblebee` CLI archives, Homebrew formula, and Scoop manifest.
 - UI-first release assets are built after the GitHub release is published and attached to the same release as standalone Wails app downloads.
-- SBOM assets are generated and attached to published releases.
+- SBOM assets are generated and attached to published releases as CycloneDX JSON, for example `HumbleBee_v0.2.1_sbom.cdx.json`.
 
 ### Doctor (health check / safe repair)
 
