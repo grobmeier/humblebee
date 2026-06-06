@@ -24,9 +24,6 @@ jobs:
           - os: ubuntu-22.04
             asset_suffix: linux_amd64
             asset_extension: .tar.gz
-          - os: macos-13
-            asset_suffix: darwin_amd64
-            asset_extension: .zip
           - os: macos-14
             asset_suffix: darwin_arm64
             asset_extension: .zip
