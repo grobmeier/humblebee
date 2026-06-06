@@ -45,9 +45,9 @@ humblebee help
 
 ## GUI
 
-HumbleBee also ships a local-first GUI built with Wails and React. The GUI uses the same local database as the CLI.
+HumbleBee also ships a standalone local-first GUI built with Wails and React. The GUI uses the same local database format as the CLI, but it does not require the CLI to be installed.
 
-Download the UI-first app from the GitHub release assets for your operating system.
+Download the UI-first app from the GitHub release assets for your operating system. GUI assets are named with the release version, for example `HumbleBee_GUI_v0.2.1_darwin_arm64.zip`.
 
 If the GUI app or `humblebee-gui` binary is installed next to the CLI, on your `PATH`, or configured through `HUMBLEBEE_GUI_PATH`, launch it from the CLI:
 
@@ -71,7 +71,7 @@ Use `humblebee gui` to test the launcher behavior after a GUI build or installed
 HumbleBee uses GitHub Actions for release builds.
 
 - CLI-first releases are created from `v*` tags through GoReleaser and publish the `humblebee` CLI archives, Homebrew formula, and Scoop manifest.
-- UI-first release assets are built after the GitHub release is published and attached to the same release as Wails app downloads.
+- UI-first release assets are built after the GitHub release is published and attached to the same release as standalone Wails app downloads.
 - SBOM assets are generated and attached to published releases.
 
 ### Doctor (health check / safe repair)

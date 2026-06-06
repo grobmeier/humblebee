@@ -12,32 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+//go:build production
+
+package frontendassets
 
 import (
-	"github.com/grobmeier/humblebee/internal/guiapp"
-	"github.com/wailsapp/wails/v2"
-	"github.com/wailsapp/wails/v2/pkg/options"
-	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"embed"
+	"io/fs"
 )
 
-func main() {
-	app := guiapp.New()
+//go:embed all:dist
+var embeddedFrontend embed.FS
 
-	err := wails.Run(&options.App{
-		Title:  "HumbleBee",
-		Width:  1100,
-		Height: 720,
-		AssetServer: &assetserver.Options{
-			Assets: frontendAssets(),
-		},
-		BackgroundColour: &options.RGBA{R: 255, G: 255, B: 255, A: 1},
-		OnStartup:        app.Startup,
-		Bind: []any{
-			app,
-		},
-	})
+func Assets() fs.FS {
+	assets, err := fs.Sub(embeddedFrontend, "dist")
 	if err != nil {
 		panic(err)
 	}
+	return assets
 }

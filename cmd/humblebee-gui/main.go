@@ -15,8 +15,6 @@
 package main
 
 import (
-	"os"
-
 	"github.com/grobmeier/humblebee/internal/guiapp"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -31,7 +29,7 @@ func main() {
 		Width:  1100,
 		Height: 720,
 		AssetServer: &assetserver.Options{
-			Assets: os.DirFS("frontend/dist"),
+			Assets: frontendAssets(),
 		},
 		BackgroundColour: &options.RGBA{R: 255, G: 255, B: 255, A: 1},
 		OnStartup:        app.Startup,

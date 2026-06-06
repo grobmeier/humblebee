@@ -22,17 +22,17 @@ jobs:
       matrix:
         include:
           - os: ubuntu-22.04
-            asset_suffix: linux-amd64
-            asset_name: HumbleBee_linux_amd64.tar.gz
+            asset_suffix: linux_amd64
+            asset_extension: .tar.gz
           - os: macos-13
-            asset_suffix: darwin-amd64
-            asset_name: HumbleBee_darwin_amd64.zip
+            asset_suffix: darwin_amd64
+            asset_extension: .zip
           - os: macos-14
-            asset_suffix: darwin-arm64
-            asset_name: HumbleBee_darwin_arm64.zip
+            asset_suffix: darwin_arm64
+            asset_extension: .zip
           - os: windows-latest
-            asset_suffix: windows-amd64
-            asset_name: HumbleBee_windows_amd64.zip
+            asset_suffix: windows_amd64
+            asset_extension: .zip
 
     steps:
       - name: Resolve release tag
@@ -40,10 +40,13 @@ jobs:
         shell: bash
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
-            echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+            tag="${{ github.event.release.tag_name }}"
           else
-            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+            tag="${{ inputs.tag }}"
           fi
+          safe_tag="${tag//\//-}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "asset_name=HumbleBee_GUI_${safe_tag}_${{ matrix.asset_suffix }}${{ matrix.asset_extension }}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout
         uses: actions/checkout@v6
@@ -70,31 +73,31 @@ jobs:
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
 
       - name: Build GUI
-        run: go run github.com/wailsapp/wails/v2/cmd/wails@v2.12.0 build -clean
+        run: go run github.com/wailsapp/wails/v2/cmd/wails@v2.12.0 build -clean -tags production
 
       - name: Package Linux GUI
         if: runner.os == 'Linux'
         shell: bash
         run: |
           mkdir -p release
-          tar -C build/bin -czf "release/${{ matrix.asset_name }}" HumbleBee
+          tar -C build/bin -czf "release/${{ steps.release.outputs.asset_name }}" HumbleBee
 
       - name: Package macOS GUI
         if: runner.os == 'macOS'
         shell: bash
         run: |
           mkdir -p release
-          ditto -c -k --sequesterRsrc --keepParent build/bin/HumbleBee.app "release/${{ matrix.asset_name }}"
+          ditto -c -k --sequesterRsrc --keepParent build/bin/HumbleBee.app "release/${{ steps.release.outputs.asset_name }}"
 
       - name: Package Windows GUI
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force release | Out-Null
-          Compress-Archive -Path build/bin/HumbleBee.exe -DestinationPath "release/${{ matrix.asset_name }}"
+          Compress-Archive -Path build/bin/HumbleBee.exe -DestinationPath "release/${{ steps.release.outputs.asset_name }}"
 
       - name: Upload GUI asset
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.release.outputs.tag }}
-          files: release/${{ matrix.asset_name }}
+          files: release/${{ steps.release.outputs.asset_name }}

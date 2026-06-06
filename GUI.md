@@ -1,6 +1,6 @@
 # HumbleBee GUI (Wails v2 + React)
 
-This is an early GUI prototype that uses the same local SQLite database as the CLI (`~/.humblebee/humblebee.db`).
+This is the standalone GUI application. It uses the same local SQLite database format as the CLI (`~/.humblebee/humblebee.db` by default), but it does not require the CLI to be installed.
 
 ## Requirements
 
@@ -32,12 +32,14 @@ cd frontend
 npm install
 npm run build
 cd ..
-wails build
+wails build -tags production
 ```
 
 ## Release Builds
 
-GUI release assets are built by `.github/workflows/release-gui.yml` after a GitHub release is published. The CLI release remains GoReleaser-based; the GUI workflow attaches Wails app downloads to the same `v*` release.
+GUI release assets are built by `.github/workflows/release-gui.yml` after a GitHub release is published. The CLI release remains GoReleaser-based; the GUI workflow attaches standalone Wails app downloads to the same `v*` release.
+
+Release asset names include both the GUI marker and release tag, for example `HumbleBee_GUI_v0.2.1_darwin_arm64.zip`.
 
 The CLI command `humblebee gui` launches an installed GUI app if one is available next to the CLI, on `PATH`, or via `HUMBLEBEE_GUI_PATH`.
 
@@ -46,4 +48,5 @@ The CLI command `humblebee gui` launches an installed GUI app if one is availabl
 - The GUI uses the same DB as the CLI by default; you can override it for testing with `HUMBLEBEE_HOME`.
   - Example: `HUMBLEBEE_HOME="$PWD/.humblebee-test" wails dev`
 - Backend bindings live in `internal/guiapp`.
-- Entry point is `cmd/humblebee-gui`.
+- The Wails entrypoint is the repository root `main.go`.
+- Production builds use embedded frontend assets through the `production` build tag.
