@@ -154,6 +154,13 @@ type WorktimeTaskDetailsReport struct {
 	TotalDuration string                  `json:"totalDuration"`
 }
 
+type WorktimeProjectDetailsReport struct {
+	Empty         bool                `json:"empty"`
+	Rows          []WorktimeReportRow `json:"rows"`
+	TotalSeconds  int64               `json:"totalSeconds"`
+	TotalDuration string              `json:"totalDuration"`
+}
+
 type WorktimeTaskDetailRow struct {
 	ProjectID       int64  `json:"projectId"`
 	ProjectName     string `json:"projectName"`
@@ -729,6 +736,28 @@ func (a *App) GetWorktimeTaskDetailsReport(req ReportRequest) (*WorktimeTaskDeta
 	return report, nil
 }
 
+func (a *App) GetWorktimeProjectDetailsReport(req ReportRequest) (*WorktimeProjectDetailsReport, error) {
+	details, err := a.GetWorktimeByMonthReport(req)
+	if err != nil {
+		return nil, err
+	}
+	report := &WorktimeProjectDetailsReport{}
+	if req.ProjectID == 0 {
+		report.Empty = true
+		return report, nil
+	}
+	for _, row := range details.Rows {
+		if row.ProjectID != req.ProjectID {
+			continue
+		}
+		report.Rows = append(report.Rows, row)
+		report.TotalSeconds += row.DurationSeconds
+	}
+	report.Empty = len(report.Rows) == 0
+	report.TotalDuration = formatReportDuration(report.TotalSeconds)
+	return report, nil
+}
+
 func firstReportableProjectID(rows []WorktimeReportRow) int64 {
 	if len(rows) == 0 {
 		return 0
@@ -1168,6 +1197,62 @@ func (a *App) ListProjectWorkItems() ([]WorkItem, error) {
 
 func (a *App) CreateProject(name string) (*WorkItem, error) {
 	return a.createWorkItem(name, nil)
+}
+
+func (a *App) CreateProjectWithTasks(name string, sourceProjectID int64) (*WorkItem, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, errors.New("project name is required")
+	}
+	if sourceProjectID == 0 {
+		return a.CreateProject(name)
+	}
+
+	database, _, err := a.openDB()
+	if err != nil {
+		return nil, err
+	}
+	defer database.Close()
+	if err := a.requireInitialized(database); err != nil {
+		return nil, err
+	}
+	personID, err := a.defaultPersonID(database)
+	if err != nil {
+		return nil, err
+	}
+	itemsRepo := repo.NewWorkItemRepo(database)
+	source, err := itemsRepo.GetByID(personID, sourceProjectID)
+	if err != nil {
+		return nil, err
+	}
+	if source == nil || source.ParentID != nil || strings.EqualFold(source.Name, "Default") || source.Status != model.WorkItemStatusActive {
+		return nil, errors.New("source project not found")
+	}
+	items, err := itemsRepo.ListProjectItems(personID)
+	if err != nil {
+		return nil, err
+	}
+	var taskNames []string
+	for _, item := range items {
+		if item.ParentID == nil || *item.ParentID != sourceProjectID || item.Status != model.WorkItemStatusActive {
+			continue
+		}
+		taskNames = append(taskNames, item.Name)
+	}
+	sort.Slice(taskNames, func(i, j int) bool {
+		return strings.ToLower(taskNames[i]) < strings.ToLower(taskNames[j])
+	})
+
+	target, err := a.CreateProject(name)
+	if err != nil {
+		return nil, err
+	}
+	for _, taskName := range taskNames {
+		if _, err := a.CreateTask(target.ID, taskName); err != nil {
+			return nil, err
+		}
+	}
+	return target, nil
 }
 
 func (a *App) UpdateProject(projectID int64, name string) (*WorkItem, error) {

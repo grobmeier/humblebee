@@ -111,6 +111,35 @@ func (a *App) ExportWorktimeTaskDetailsReport(req ReportRequest) (string, error)
 	return path, nil
 }
 
+func (a *App) ExportWorktimeProjectDetailsReport(req ReportRequest) (string, error) {
+	report, err := a.GetWorktimeProjectDetailsReport(req)
+	if err != nil {
+		return "", err
+	}
+	labels := reportExportLabelsFor(req.Language)
+	rows := [][]string{{labels.Task, labels.Date, labels.Start, labels.End, labels.Duration, labels.Description}}
+	for _, row := range report.Rows {
+		rows = append(rows, []string{
+			row.TaskName,
+			row.Date,
+			row.StartTime,
+			row.EndTime,
+			row.Duration,
+			row.Description,
+		})
+	}
+	rows = append(rows, []string{"", "", "", labels.Total, report.TotalDuration, ""})
+
+	path, err := reportExportPath("worktime-project-details", req)
+	if err != nil {
+		return "", err
+	}
+	if err := writeSimpleXLSX(path, labels.ReportSheet, rows); err != nil {
+		return "", err
+	}
+	return path, nil
+}
+
 func (a *App) ExportTimesheetReport(req ReportRequest) (string, error) {
 	report, err := a.GetTimesheetReport(req)
 	if err != nil {
@@ -256,7 +285,7 @@ func worksheetXML(rows [][]string) string {
 		builder.WriteString(fmt.Sprintf(`<row r="%d">`, rowIndex+1))
 		for colIndex, value := range row {
 			ref := cellReference(colIndex, rowIndex)
-			builder.WriteString(`<c r="` + ref + `" t="inlineStr"><is><t>` + xmlEscape(value) + `</t></is></c>`)
+			builder.WriteString(`<c r="` + ref + `" t="inlineStr"><is><t xml:space="preserve">` + xmlEscape(value) + `</t></is></c>`)
 		}
 		builder.WriteString(`</row>`)
 	}

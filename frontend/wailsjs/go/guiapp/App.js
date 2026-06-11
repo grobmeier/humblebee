@@ -10,6 +10,10 @@ export function CreateProject(arg1) {
   return window['go']['guiapp']['App']['CreateProject'](arg1);
 }
 
+export function CreateProjectWithTasks(arg1, arg2) {
+  return window['go']['guiapp']['App']['CreateProjectWithTasks'](arg1, arg2);
+}
+
 export function CreateTask(arg1, arg2) {
   return window['go']['guiapp']['App']['CreateTask'](arg1, arg2);
 }
@@ -46,6 +50,10 @@ export function ExportWorktimeGroupedByProjectReport(arg1) {
   return window['go']['guiapp']['App']['ExportWorktimeGroupedByProjectReport'](arg1);
 }
 
+export function ExportWorktimeProjectDetailsReport(arg1) {
+  return window['go']['guiapp']['App']['ExportWorktimeProjectDetailsReport'](arg1);
+}
+
 export function ExportWorktimeTaskDetailsReport(arg1) {
   return window['go']['guiapp']['App']['ExportWorktimeTaskDetailsReport'](arg1);
 }
@@ -72,6 +80,10 @@ export function GetWorktimeByMonthReport(arg1) {
 
 export function GetWorktimeGroupedByProjectReport(arg1) {
   return window['go']['guiapp']['App']['GetWorktimeGroupedByProjectReport'](arg1);
+}
+
+export function GetWorktimeProjectDetailsReport(arg1) {
+  return window['go']['guiapp']['App']['GetWorktimeProjectDetailsReport'](arg1);
 }
 
 export function GetWorktimeTaskDetailsReport(arg1) {
