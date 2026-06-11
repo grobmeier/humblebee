@@ -20,6 +20,7 @@ import {
   CreateDatabase,
   CreateTimeEntry,
   CreateProject,
+  CreateProjectWithTasks,
   CreateTask,
   DeleteProject,
   DeleteTimeEntry,
@@ -358,8 +359,8 @@ export default function App() {
     }
   }
 
-  async function onCreateProject(name: string) {
-    const project = await CreateProject(name);
+  async function onCreateProject(name: string, sourceProjectId: number) {
+    const project = sourceProjectId > 0 ? await CreateProjectWithTasks(name, sourceProjectId) : await CreateProject(name);
     await refreshWorkItems();
     await refreshProjectWorkItems();
     setSelectedProjectPageProjectId(project.id);
