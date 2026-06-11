@@ -6,6 +6,8 @@ export function CreateDatabase(arg1:string):Promise<guiapp.DatabaseInfo>;
 
 export function CreateProject(arg1:string):Promise<guiapp.WorkItem>;
 
+export function CreateProjectWithTasks(arg1:string,arg2:number):Promise<guiapp.WorkItem>;
+
 export function CreateTask(arg1:number,arg2:string):Promise<guiapp.WorkItem>;
 
 export function CreateTimeEntry(arg1:guiapp.CreateTimeEntryRequest):Promise<guiapp.TimeEntry>;
@@ -24,6 +26,8 @@ export function ExportWorktimeByMonthReport(arg1:guiapp.ReportRequest):Promise<s
 
 export function ExportWorktimeGroupedByProjectReport(arg1:guiapp.ReportRequest):Promise<string>;
 
+export function ExportWorktimeProjectDetailsReport(arg1:guiapp.ReportRequest):Promise<string>;
+
 export function ExportWorktimeTaskDetailsReport(arg1:guiapp.ReportRequest):Promise<string>;
 
 export function GetDashboard():Promise<guiapp.Dashboard>;
@@ -37,6 +41,8 @@ export function GetTimesheetReport(arg1:guiapp.ReportRequest):Promise<guiapp.Tim
 export function GetWorktimeByMonthReport(arg1:guiapp.ReportRequest):Promise<guiapp.WorktimeByMonthReport>;
 
 export function GetWorktimeGroupedByProjectReport(arg1:guiapp.ReportRequest):Promise<guiapp.WorktimeGroupedByProjectReport>;
+
+export function GetWorktimeProjectDetailsReport(arg1:guiapp.ReportRequest):Promise<guiapp.WorktimeProjectDetailsReport>;
 
 export function GetWorktimeTaskDetailsReport(arg1:guiapp.ReportRequest):Promise<guiapp.WorktimeTaskDetailsReport>;
 

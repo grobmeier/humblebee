@@ -260,6 +260,90 @@ func TestCreateProjectUpdateProjectAndCreateTask(t *testing.T) {
 	}
 }
 
+func TestCreateProjectWithTasksCopiesOnlyActiveTasks(t *testing.T) {
+	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
+
+	app := New()
+	if err := app.Init("user@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	source, err := app.CreateProject("Template")
+	if err != nil {
+		t.Fatal(err)
+	}
+	activeTask, err := app.CreateTask(source.ID, "Accounting")
+	if err != nil {
+		t.Fatal(err)
+	}
+	completedTask, err := app.CreateTask(source.ID, "Old setup")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.SetTaskActive(completedTask.ID, false); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.CreateTimeEntry(CreateTimeEntryRequest{
+		WorkItemID:  activeTask.ID,
+		StartDate:   "2026-06-04",
+		StartTime:   "09:00",
+		EndDate:     "2026-06-04",
+		EndTime:     "10:00",
+		Description: "Template history",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	target, err := app.CreateProjectWithTasks("New client", source.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	items, err := app.ListProjectWorkItems()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !containsChildWorkItem(items, target.ID, "Accounting") {
+		t.Fatalf("expected copied active task under new project: %#v", items)
+	}
+	if containsChildWorkItem(items, target.ID, "Old setup") {
+		t.Fatalf("expected completed task not to be copied: %#v", items)
+	}
+	day, err := app.GetTimeDay("2026-06-04")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(day.Entries) != 1 {
+		t.Fatalf("expected source time entry to remain single and not be copied, got %#v", day.Entries)
+	}
+	if day.Entries[0].WorkItemID == nil || *day.Entries[0].WorkItemID != activeTask.ID {
+		t.Fatalf("expected original time entry to stay on source task, got %#v", day.Entries[0])
+	}
+}
+
+func TestCreateProjectWithTasksRejectsInvalidSourceProject(t *testing.T) {
+	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
+
+	app := New()
+	if err := app.Init("user@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	source, err := app.CreateProject("Template")
+	if err != nil {
+		t.Fatal(err)
+	}
+	task, err := app.CreateTask(source.ID, "Accounting")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := app.CreateProjectWithTasks("New client", task.ID); err == nil {
+		t.Fatal("expected task source to be rejected")
+	}
+	if _, err := app.CreateProjectWithTasks("New client", 999999); err == nil {
+		t.Fatal("expected missing source project to be rejected")
+	}
+}
+
 func TestGetWorktimeByMonthReportShowsMonthlyTimeRows(t *testing.T) {
 	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
 
@@ -309,6 +393,128 @@ func TestGetWorktimeByMonthReportShowsMonthlyTimeRows(t *testing.T) {
 	}
 	if row.Date != "2026-06-04" || row.StartTime != "09:00" || row.EndTime != "10:30" || row.Duration != "01:30" {
 		t.Fatalf("unexpected row times: %#v", row)
+	}
+}
+
+func TestGetWorktimeProjectDetailsReportShowsSelectedProjectEntries(t *testing.T) {
+	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
+
+	app := New()
+	if err := app.Init("user@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	client, err := app.CreateProject("Client")
+	if err != nil {
+		t.Fatal(err)
+	}
+	research, err := app.CreateTask(client.ID, "Research")
+	if err != nil {
+		t.Fatal(err)
+	}
+	internal, err := app.CreateProject("Internal")
+	if err != nil {
+		t.Fatal(err)
+	}
+	planning, err := app.CreateTask(internal.ID, "Planning")
+	if err != nil {
+		t.Fatal(err)
+	}
+	note := "Line one │ äöü & <tag>\nLine two"
+	if _, err := app.CreateTimeEntry(CreateTimeEntryRequest{
+		WorkItemID:  research.ID,
+		StartDate:   "2026-06-04",
+		StartTime:   "09:00",
+		EndDate:     "2026-06-04",
+		EndTime:     "10:30",
+		Description: note,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.CreateTimeEntry(CreateTimeEntryRequest{
+		WorkItemID: planning.ID,
+		StartDate:  "2026-06-04",
+		StartTime:  "11:00",
+		EndDate:    "2026-06-04",
+		EndTime:    "12:00",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	report, err := app.GetWorktimeProjectDetailsReport(ReportRequest{
+		Mode:      "monthly",
+		Month:     6,
+		Year:      2026,
+		ProjectID: client.ID,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Empty {
+		t.Fatal("expected project detail rows")
+	}
+	if report.TotalSeconds != 5400 || report.TotalDuration != "01:30" {
+		t.Fatalf("expected 01:30 total, got %d %q", report.TotalSeconds, report.TotalDuration)
+	}
+	if len(report.Rows) != 1 {
+		t.Fatalf("expected only selected project row, got %#v", report.Rows)
+	}
+	row := report.Rows[0]
+	if row.ProjectName != "Client" || row.TaskName != "Research" {
+		t.Fatalf("unexpected project detail row labels: %#v", row)
+	}
+	if row.Description != note {
+		t.Fatalf("expected note to be preserved, got %q", row.Description)
+	}
+}
+
+func TestGetWorktimeProjectDetailsReportAppliesDateRange(t *testing.T) {
+	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
+
+	app := New()
+	if err := app.Init("user@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	project, err := app.CreateProject("Client")
+	if err != nil {
+		t.Fatal(err)
+	}
+	task, err := app.CreateTask(project.ID, "Research")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.CreateTimeEntry(CreateTimeEntryRequest{
+		WorkItemID: task.ID,
+		StartDate:  "2026-06-03",
+		StartTime:  "09:00",
+		EndDate:    "2026-06-03",
+		EndTime:    "10:00",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.CreateTimeEntry(CreateTimeEntryRequest{
+		WorkItemID: task.ID,
+		StartDate:  "2026-06-04",
+		StartTime:  "09:00",
+		EndDate:    "2026-06-04",
+		EndTime:    "11:00",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	report, err := app.GetWorktimeProjectDetailsReport(ReportRequest{
+		Mode:      "daily",
+		StartDate: "2026-06-04",
+		EndDate:   "2026-06-04",
+		ProjectID: project.ID,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(report.Rows) != 1 {
+		t.Fatalf("expected one date range row, got %#v", report.Rows)
+	}
+	if report.Rows[0].Date != "2026-06-04" || report.TotalDuration != "02:00" {
+		t.Fatalf("unexpected date range report: %#v", report)
 	}
 }
 
@@ -698,6 +904,53 @@ func TestExportWorktimeByMonthReportUsesGermanLabels(t *testing.T) {
 	}
 }
 
+func TestExportWorktimeProjectDetailsReportPreservesMultilineNotes(t *testing.T) {
+	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
+
+	app := New()
+	if err := app.Init("user@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	project, err := app.CreateProject("Client")
+	if err != nil {
+		t.Fatal(err)
+	}
+	task, err := app.CreateTask(project.ID, "Research")
+	if err != nil {
+		t.Fatal(err)
+	}
+	note := "Line one │ äöü & <tag>\nLine two \"quoted\""
+	if _, err := app.CreateTimeEntry(CreateTimeEntryRequest{
+		WorkItemID:  task.ID,
+		StartDate:   "2026-06-04",
+		StartTime:   "09:00",
+		EndDate:     "2026-06-04",
+		EndTime:     "10:00",
+		Description: note,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	path, err := app.ExportWorktimeProjectDetailsReport(ReportRequest{
+		Mode:      "monthly",
+		Month:     6,
+		Year:      2026,
+		ProjectID: project.ID,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	worksheet := readXLSXWorksheet(t, path)
+	for _, want := range []string{"Line one │ äöü", "Line two &quot;quoted&quot;", "&amp;", "&lt;tag&gt;"} {
+		if !strings.Contains(worksheet, want) {
+			t.Fatalf("expected worksheet to contain %q, got %s", want, worksheet)
+		}
+	}
+	if !strings.Contains(worksheet, "xml:space=\"preserve\"") {
+		t.Fatalf("expected worksheet cells to preserve whitespace, got %s", worksheet)
+	}
+}
+
 func TestCreateTaskRejectsTaskParent(t *testing.T) {
 	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
 
@@ -926,6 +1179,15 @@ func createGUIAppTestWorkItem(t *testing.T, app *App, name string) int64 {
 func containsGUIWorkItem(items []WorkItem, id int64, name string) bool {
 	for _, item := range items {
 		if item.ID == id && item.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+func containsChildWorkItem(items []WorkItem, parentID int64, name string) bool {
+	for _, item := range items {
+		if item.ParentID != nil && *item.ParentID == parentID && item.Name == name {
 			return true
 		}
 	}
