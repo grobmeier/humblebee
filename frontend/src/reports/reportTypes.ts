@@ -16,7 +16,7 @@
 
 import type { guiapp } from "../../wailsjs/go/models";
 
-export type ReportSlug = "worktime-by-month" | "worktime-grouped-by-project" | "worktime-task-details" | "timesheet";
+export type ReportSlug = "worktime-by-month" | "worktime-grouped-by-project" | "worktime-project-details" | "worktime-task-details" | "timesheet";
 
 export type ReportMode = "monthly" | "daily";
 
@@ -34,6 +34,7 @@ export type WorkItem = { id: number; name: string; parentId?: number | null; dep
 export type ReportData =
   | guiapp.WorktimeByMonthReport
   | guiapp.WorktimeGroupedByProjectReport
+  | guiapp.WorktimeProjectDetailsReport
   | guiapp.WorktimeTaskDetailsReport
   | guiapp.TimesheetReport;
 
@@ -59,13 +60,15 @@ export type ReportsPageText = {
   print: string;
   reportList: string;
   savedTo: string;
+  selectProject: string;
   dateRange: string;
   titles: Record<ReportSlug, string>;
 };
 
-export const reportDefinitions: Array<{ slug: ReportSlug; needsProject: boolean; decimalToggle: boolean }> = [
-  { slug: "worktime-by-month", needsProject: false, decimalToggle: false },
-  { slug: "worktime-grouped-by-project", needsProject: false, decimalToggle: false },
-  { slug: "worktime-task-details", needsProject: true, decimalToggle: false },
-  { slug: "timesheet", needsProject: false, decimalToggle: true }
+export const reportDefinitions: Array<{ slug: ReportSlug; needsProject: boolean; requiresExplicitProject: boolean; decimalToggle: boolean }> = [
+  { slug: "worktime-by-month", needsProject: false, requiresExplicitProject: false, decimalToggle: false },
+  { slug: "worktime-grouped-by-project", needsProject: false, requiresExplicitProject: false, decimalToggle: false },
+  { slug: "worktime-project-details", needsProject: true, requiresExplicitProject: true, decimalToggle: false },
+  { slug: "worktime-task-details", needsProject: true, requiresExplicitProject: false, decimalToggle: false },
+  { slug: "timesheet", needsProject: false, requiresExplicitProject: false, decimalToggle: true }
 ];

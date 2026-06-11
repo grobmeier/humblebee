@@ -20,7 +20,7 @@ import type { ReportFilter, ReportSlug } from "./reportTypes";
 
 export function reportSlugFromHash(hash: string): ReportSlug {
   const value = hash.replace(/^#reports\/?/, "");
-  if (value === "worktime-grouped-by-project" || value === "worktime-task-details" || value === "timesheet") {
+  if (value === "worktime-grouped-by-project" || value === "worktime-project-details" || value === "worktime-task-details" || value === "timesheet") {
     return value;
   }
   return "worktime-by-month";
