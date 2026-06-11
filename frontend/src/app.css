@@ -535,6 +535,11 @@ code {
   background: #fafafa;
 }
 
+.report-note-cell {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
 .side-navigation-list,
 .project-task-list {
   display: grid;

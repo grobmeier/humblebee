@@ -25,6 +25,7 @@ type ReportFilterBarProps = {
   language: DateLanguage;
   needsProject: boolean;
   projectOptions: WorkItem[];
+  projectPlaceholder: string;
   showDecimal: boolean;
   supportsDecimal: boolean;
   t: ReportsPageText;
@@ -39,6 +40,7 @@ export function ReportFilterBar({
   language,
   needsProject,
   projectOptions,
+  projectPlaceholder,
   showDecimal,
   supportsDecimal,
   t,
@@ -60,7 +62,7 @@ export function ReportFilterBar({
       <div className="report-filter-controls">
         {needsProject ? (
           <select className="tab-form-control tab-form-control--small" value={filter.projectId} onChange={(event) => onChange({ ...filter, projectId: Number(event.target.value) })}>
-            <option value={0}>{t.firstReportableProject}</option>
+            <option value={0}>{projectPlaceholder}</option>
             {projectOptions.map((project) => (
               <option key={project.id} value={project.id}>
                 {labelWorkItemName(project.name, language)}

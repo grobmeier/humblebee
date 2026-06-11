@@ -37,7 +37,7 @@ export function WorktimeByMonthTable({ report, t }: ReportTableProps<guiapp.Work
           <td>{row.startTime}</td>
           <td>{row.endTime}</td>
           <td>{row.duration}</td>
-          <td>{row.description}</td>
+          <td className="report-note-cell">{row.description}</td>
         </tr>
       ))}
       <tr>
@@ -65,7 +65,7 @@ export function GroupedByProjectTable({ report, t }: ReportTableProps<guiapp.Wor
                 <td>{row.startTime}</td>
                 <td>{row.endTime}</td>
                 <td>{row.duration}</td>
-                <td>{row.description}</td>
+                <td className="report-note-cell">{row.description}</td>
               </tr>
             ))}
             <tr>
@@ -77,6 +77,30 @@ export function GroupedByProjectTable({ report, t }: ReportTableProps<guiapp.Wor
         </section>
       ))}
     </>
+  );
+}
+
+export function ProjectDetailsTable({ report, t }: ReportTableProps<guiapp.WorktimeProjectDetailsReport>) {
+  const rows = report.rows ?? [];
+  if (report.empty || !rows.length) return <p className="projects-empty">{t.emptyReport}</p>;
+  return (
+    <ReportTable headers={[t.columns.task, t.columns.date, t.columns.start, t.columns.end, t.columns.duration, t.columns.description]}>
+      {rows.map((row, index) => (
+        <tr key={`${row.date}-${row.startTime}-${index}`}>
+          <td>{row.taskName}</td>
+          <td>{row.date}</td>
+          <td>{row.startTime}</td>
+          <td>{row.endTime}</td>
+          <td>{row.duration}</td>
+          <td className="report-note-cell">{row.description}</td>
+        </tr>
+      ))}
+      <tr>
+        <td colSpan={4}></td>
+        <td><strong>{report.totalDuration}</strong></td>
+        <td></td>
+      </tr>
+    </ReportTable>
   );
 }
 

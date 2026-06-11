@@ -86,6 +86,7 @@ export const translations = {
       addTask: "Aufgabe hinzufuegen",
       cancel: "Abbrechen",
       completedTask: "Aufgabe erledigt",
+      copyTasksFrom: "Aufgaben kopieren von",
       createProject: "Projekt anlegen",
       createTask: "Aufgabe anlegen",
       deleteProject: "Projekt loeschen",
@@ -97,6 +98,7 @@ export const translations = {
       emptyTasks: "Noch keine Aufgaben fuer dieses Projekt.",
       name: "Name",
       nameRequired: "Bitte gib einen Namen ein.",
+      noTaskTemplate: "Keine Aufgaben kopieren",
       projectList: "Projekte",
       saveProject: "Projekt speichern",
       selectProject: "Waehle links ein Projekt aus.",
@@ -126,9 +128,11 @@ export const translations = {
       print: "Drucken",
       reportList: "Berichte",
       savedTo: "Gespeichert unter",
+      selectProject: "Projekt auswaehlen",
       titles: {
         "worktime-by-month": "Arbeitszeit pro Monat",
         "worktime-grouped-by-project": "Arbeitszeit nach Projekt",
+        "worktime-project-details": "Projektdetails",
         "worktime-task-details": "Arbeitszeitdetails nach Aufgabe",
         timesheet: "Stundenzettel"
       }
@@ -226,6 +230,7 @@ export const translations = {
       addTask: "Add Task",
       cancel: "Cancel",
       completedTask: "Task completed",
+      copyTasksFrom: "Copy tasks from",
       createProject: "Create Project",
       createTask: "Create Task",
       deleteProject: "Delete Project",
@@ -237,6 +242,7 @@ export const translations = {
       emptyTasks: "No tasks for this project yet.",
       name: "Name",
       nameRequired: "Enter a name.",
+      noTaskTemplate: "Do not copy tasks",
       projectList: "Projects",
       saveProject: "Save Project",
       selectProject: "Select a project on the left.",
@@ -266,9 +272,11 @@ export const translations = {
       print: "Print",
       reportList: "Reports",
       savedTo: "Saved to",
+      selectProject: "Select project",
       titles: {
         "worktime-by-month": "Worktime by month",
         "worktime-grouped-by-project": "Worktime grouped by project",
+        "worktime-project-details": "Project details",
         "worktime-task-details": "Worktime task details",
         timesheet: "Timesheet"
       }
@@ -366,6 +374,7 @@ export const translations = {
     addTask: string;
     cancel: string;
     completedTask: string;
+    copyTasksFrom: string;
     createProject: string;
     createTask: string;
     deleteProject: string;
@@ -377,6 +386,7 @@ export const translations = {
     emptyTasks: string;
     name: string;
     nameRequired: string;
+    noTaskTemplate: string;
     projectList: string;
     saveProject: string;
     selectProject: string;
@@ -406,9 +416,11 @@ export const translations = {
     print: string;
     reportList: string;
     savedTo: string;
+    selectProject: string;
     titles: {
       "worktime-by-month": string;
       "worktime-grouped-by-project": string;
+      "worktime-project-details": string;
       "worktime-task-details": string;
       timesheet: string;
     };

@@ -19,16 +19,18 @@ import {
   ExportTimesheetReport,
   ExportWorktimeByMonthReport,
   ExportWorktimeGroupedByProjectReport,
+  ExportWorktimeProjectDetailsReport,
   ExportWorktimeTaskDetailsReport,
   GetTimesheetReport,
   GetWorktimeByMonthReport,
   GetWorktimeGroupedByProjectReport,
+  GetWorktimeProjectDetailsReport,
   GetWorktimeTaskDetailsReport
 } from "../../wailsjs/go/guiapp/App";
 import type { guiapp } from "../../wailsjs/go/models";
 import { translations, type Language } from "../dashboard/translations";
 import { ReportFilterBar } from "./ReportFilterBar";
-import { GroupedByProjectTable, TaskDetailsTable, TimesheetTable, WorktimeByMonthTable } from "./ReportTables";
+import { GroupedByProjectTable, ProjectDetailsTable, TaskDetailsTable, TimesheetTable, WorktimeByMonthTable } from "./ReportTables";
 import { ReportsNavigation } from "./ReportsNavigation";
 import { defaultReportFilter, fileURL, toReportRequest } from "./reportUtils";
 import { reportDefinitions, type ReportData, type ReportFilter, type ReportSlug, type ReportsPageText, type WorkItem } from "./reportTypes";
@@ -85,6 +87,7 @@ export function ReportsPage({ activeReport, language, workItems }: ReportsPagePr
           filter={filter}
           language={language}
           needsProject={definition.needsProject}
+          projectPlaceholder={definition.requiresExplicitProject ? t.selectProject : t.firstReportableProject}
           projectOptions={projectOptions}
           showDecimal={showDecimal}
           supportsDecimal={definition.decimalToggle}
@@ -112,6 +115,9 @@ async function loadReport(activeReport: ReportSlug, filter: ReportFilter, langua
   if (activeReport === "worktime-grouped-by-project") {
     return GetWorktimeGroupedByProjectReport(request);
   }
+  if (activeReport === "worktime-project-details") {
+    return GetWorktimeProjectDetailsReport(request);
+  }
   if (activeReport === "worktime-task-details") {
     return GetWorktimeTaskDetailsReport(request);
   }
@@ -126,6 +132,9 @@ async function exportActiveReport(activeReport: ReportSlug, filter: ReportFilter
   if (activeReport === "worktime-grouped-by-project") {
     return ExportWorktimeGroupedByProjectReport(request);
   }
+  if (activeReport === "worktime-project-details") {
+    return ExportWorktimeProjectDetailsReport(request);
+  }
   if (activeReport === "worktime-task-details") {
     return ExportWorktimeTaskDetailsReport(request);
   }
@@ -138,6 +147,9 @@ async function exportActiveReport(activeReport: ReportSlug, filter: ReportFilter
 function renderReport(activeReport: ReportSlug, data: ReportData, showDecimal: boolean, t: ReportsPageText) {
   if (activeReport === "worktime-grouped-by-project") {
     return <GroupedByProjectTable report={data as guiapp.WorktimeGroupedByProjectReport} t={t} />;
+  }
+  if (activeReport === "worktime-project-details") {
+    return <ProjectDetailsTable report={data as guiapp.WorktimeProjectDetailsReport} t={t} />;
   }
   if (activeReport === "worktime-task-details") {
     return <TaskDetailsTable report={data as guiapp.WorktimeTaskDetailsReport} t={t} />;
