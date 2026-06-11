@@ -62,7 +62,7 @@ jobs:
         with:
           ref: ${{ steps.sbom.outputs.tag }}
 
-      - name: Generate and attach CycloneDX SBOM
+      - name: Generate CycloneDX SBOM
         uses: anchore/sbom-action@v0
         with:
           path: .
@@ -70,4 +70,21 @@ jobs:
           output-file: ${{ steps.sbom.outputs.file }}
           artifact-name: ${{ steps.sbom.outputs.file }}
           upload-artifact: true
-          upload-release-assets: true
+          upload-release-assets: false
+
+      - name: Attach SBOM to GitHub release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SBOM_FILE: ${{ steps.sbom.outputs.file }}
+          RELEASE_TAG: ${{ steps.sbom.outputs.tag }}
+        run: |
+          if [ ! -f "$SBOM_FILE" ]; then
+            found="$(find "$RUNNER_TEMP" "$GITHUB_WORKSPACE" -type f -name "$SBOM_FILE" | head -n 1)"
+            if [ -z "$found" ]; then
+              echo "SBOM file not found: $SBOM_FILE" >&2
+              exit 1
+            fi
+            cp "$found" "$SBOM_FILE"
+          fi
+          gh release upload "$RELEASE_TAG" "$SBOM_FILE" --clobber
