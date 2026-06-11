@@ -744,6 +744,7 @@ func (a *App) GetWorktimeProjectDetailsReport(req ReportRequest) (*WorktimeProje
 	report := &WorktimeProjectDetailsReport{}
 	if req.ProjectID == 0 {
 		report.Empty = true
+		report.TotalDuration = formatReportDuration(0)
 		return report, nil
 	}
 	for _, row := range details.Rows {
@@ -1249,6 +1250,7 @@ func (a *App) CreateProjectWithTasks(name string, sourceProjectID int64) (*WorkI
 	}
 	for _, taskName := range taskNames {
 		if _, err := a.CreateTask(target.ID, taskName); err != nil {
+			_ = a.DeleteProject(target.ID)
 			return nil, err
 		}
 	}
