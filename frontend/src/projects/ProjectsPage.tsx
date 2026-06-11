@@ -27,7 +27,7 @@ type ProjectsPageProps = {
   selectedProjectId: number;
   t: ProjectsPageText;
   workItems: WorkItem[];
-  onCreateProject: (name: string) => Promise<void>;
+  onCreateProject: (name: string, sourceProjectId: number) => Promise<void>;
   onCreateTask: (projectId: number, name: string) => Promise<void>;
   onDeleteProject: (projectId: number) => Promise<void>;
   onSelectProject: (projectId: number) => void;
@@ -57,6 +57,7 @@ export function ProjectsPage({
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [copySourceProjectId, setCopySourceProjectId] = useState(0);
   const [showHiddenTasks, setShowHiddenTasks] = useState(false);
   const hasHiddenTasks = tasks.some((task) => !isActiveTask(task));
   const visibleTasks = showHiddenTasks ? tasks : tasks.filter(isActiveTask);
@@ -80,30 +81,35 @@ export function ProjectsPage({
   function openCreateProjectModal() {
     setModal({ type: "create-project" });
     setName("");
+    setCopySourceProjectId(0);
     setError(null);
   }
 
   function openEditProjectModal(project: WorkItem) {
     setModal({ type: "edit-project", project });
     setName(project.name);
+    setCopySourceProjectId(0);
     setError(null);
   }
 
   function openCreateTaskModal(project: WorkItem) {
     setModal({ type: "create-task", project });
     setName("");
+    setCopySourceProjectId(0);
     setError(null);
   }
 
   function openDeleteProjectModal(project: WorkItem) {
     setModal({ type: "delete-project", project });
     setName("");
+    setCopySourceProjectId(0);
     setError(null);
   }
 
   function closeModal() {
     setModal(null);
     setName("");
+    setCopySourceProjectId(0);
     setError(null);
   }
 
@@ -145,7 +151,7 @@ export function ProjectsPage({
     setError(null);
     try {
       if (modal.type === "create-project") {
-        await onCreateProject(trimmedName);
+        await onCreateProject(trimmedName, copySourceProjectId);
       } else if (modal.type === "edit-project") {
         await onUpdateProject(modal.project.id, trimmedName);
       } else {
@@ -212,13 +218,17 @@ export function ProjectsPage({
 
     return (
       <ProjectNameModal
+        copySourceProjectId={copySourceProjectId}
         error={error}
         isSaving={isSaving}
+        language={language}
         modal={activeModal}
         name={name}
+        projects={projects}
         t={t}
         onChange={setName}
         onClose={closeModal}
+        onCopySourceChange={setCopySourceProjectId}
         onSubmit={submitModal}
       />
     );

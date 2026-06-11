@@ -27,6 +27,7 @@ export type ProjectsPageText = {
   addTask: string;
   cancel: string;
   completedTask: string;
+  copyTasksFrom: string;
   createProject: string;
   createTask: string;
   deleteProject: string;
@@ -37,6 +38,8 @@ export type ProjectsPageText = {
   emptyProjects: string;
   emptyTasks: string;
   name: string;
+  nameRequired: string;
+  noTaskTemplate: string;
   projectList: string;
   saveProject: string;
   selectProject: string;

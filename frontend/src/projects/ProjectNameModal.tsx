@@ -16,20 +16,39 @@
 
 import type { FormEvent } from "react";
 import { FormRow, Modal } from "../components/Modal";
-import type { ProjectFormModalState, ProjectsPageText } from "./projectTypes";
+import type { DateLanguage } from "../dashboard/dateFormat";
+import { labelWorkItemName } from "../dashboard/workItemUtils";
+import type { ProjectFormModalState, ProjectsPageText, WorkItem } from "./projectTypes";
 
 type ProjectNameModalProps = {
+  copySourceProjectId: number;
   error: string | null;
   isSaving: boolean;
+  language: DateLanguage;
   modal: ProjectFormModalState;
   name: string;
+  projects: WorkItem[];
   t: ProjectsPageText;
   onChange: (name: string) => void;
   onClose: () => void;
+  onCopySourceChange: (projectId: number) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 };
 
-export function ProjectNameModal({ error, isSaving, modal, name, t, onChange, onClose, onSubmit }: ProjectNameModalProps) {
+export function ProjectNameModal({
+  copySourceProjectId,
+  error,
+  isSaving,
+  language,
+  modal,
+  name,
+  projects,
+  t,
+  onChange,
+  onClose,
+  onCopySourceChange,
+  onSubmit
+}: ProjectNameModalProps) {
   return (
     <Modal
       title={modalTitle(modal, t)}
@@ -45,6 +64,18 @@ export function ProjectNameModal({ error, isSaving, modal, name, t, onChange, on
       <FormRow label={t.name}>
         <input className="tab-form-control" autoFocus value={name} onChange={(event) => onChange(event.target.value)} />
       </FormRow>
+      {modal.type === "create-project" ? (
+        <FormRow label={t.copyTasksFrom}>
+          <select className="tab-form-control" value={copySourceProjectId} onChange={(event) => onCopySourceChange(Number(event.target.value))}>
+            <option value={0}>{t.noTaskTemplate}</option>
+            {projects.map((project) => (
+              <option key={project.id} value={project.id}>
+                {labelWorkItemName(project.name, language)}
+              </option>
+            ))}
+          </select>
+        </FormRow>
+      ) : null}
     </Modal>
   );
 }
