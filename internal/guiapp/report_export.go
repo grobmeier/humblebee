@@ -130,7 +130,7 @@ func (a *App) ExportWorktimeProjectDetailsReport(req ReportRequest) (string, err
 	}
 	rows = append(rows, []string{"", "", "", labels.Total, report.TotalDuration, ""})
 
-	path, err := reportExportPath("worktime-project-details", req)
+	path, err := reportExportPath(fmt.Sprintf("worktime-project-details-%d", req.ProjectID), req)
 	if err != nil {
 		return "", err
 	}

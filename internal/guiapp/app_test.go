@@ -16,6 +16,7 @@ package guiapp
 
 import (
 	"archive/zip"
+	"fmt"
 	"io"
 	"path/filepath"
 	"strings"
@@ -344,6 +345,55 @@ func TestCreateProjectWithTasksRejectsInvalidSourceProject(t *testing.T) {
 	}
 }
 
+func TestCreateProjectWithTasksRollsBackProjectWhenTaskCopyFails(t *testing.T) {
+	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
+
+	app := New()
+	if err := app.Init("user@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	source, err := app.CreateProject("Template")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.CreateTask(source.ID, "Accounting"); err != nil {
+		t.Fatal(err)
+	}
+
+	database, _, err := app.openDB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	personID, err := app.defaultPersonID(database)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repo.NewWorkItemRepo(database).Create(repo.CreateWorkItemParams{
+		PersonID: personID,
+		UUID:     uuid.NewString(),
+		Name:     "",
+		ParentID: &source.ID,
+		Depth:    1,
+		Created:  time.Now().UTC().Unix(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := database.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := app.CreateProjectWithTasks("New client", source.ID); err == nil {
+		t.Fatal("expected invalid copied task name to fail")
+	}
+	items, err := app.ListProjectWorkItems()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if containsTopLevelWorkItem(items, "New client") {
+		t.Fatalf("expected failed task copy to roll back target project: %#v", items)
+	}
+}
+
 func TestGetWorktimeByMonthReportShowsMonthlyTimeRows(t *testing.T) {
 	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
 
@@ -464,6 +514,30 @@ func TestGetWorktimeProjectDetailsReportShowsSelectedProjectEntries(t *testing.T
 	}
 	if row.Description != note {
 		t.Fatalf("expected note to be preserved, got %q", row.Description)
+	}
+}
+
+func TestGetWorktimeProjectDetailsReportWithoutProjectHasZeroDuration(t *testing.T) {
+	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
+
+	app := New()
+	if err := app.Init("user@example.com"); err != nil {
+		t.Fatal(err)
+	}
+
+	report, err := app.GetWorktimeProjectDetailsReport(ReportRequest{
+		Mode:  "monthly",
+		Month: 6,
+		Year:  2026,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !report.Empty {
+		t.Fatalf("expected report without selected project to be empty: %#v", report)
+	}
+	if report.TotalSeconds != 0 || report.TotalDuration != "00:00" {
+		t.Fatalf("expected zero total duration, got %d %q", report.TotalSeconds, report.TotalDuration)
 	}
 }
 
@@ -940,6 +1014,9 @@ func TestExportWorktimeProjectDetailsReportPreservesMultilineNotes(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
+	if !strings.Contains(filepath.Base(path), fmt.Sprintf("worktime-project-details-%d", project.ID)) {
+		t.Fatalf("expected project-specific export filename, got %q", path)
+	}
 	worksheet := readXLSXWorksheet(t, path)
 	for _, want := range []string{"Line one │ äöü", "Line two &quot;quoted&quot;", "&amp;", "&lt;tag&gt;"} {
 		if !strings.Contains(worksheet, want) {
@@ -1188,6 +1265,15 @@ func containsGUIWorkItem(items []WorkItem, id int64, name string) bool {
 func containsChildWorkItem(items []WorkItem, parentID int64, name string) bool {
 	for _, item := range items {
 		if item.ParentID != nil && *item.ParentID == parentID && item.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
+func containsTopLevelWorkItem(items []WorkItem, name string) bool {
+	for _, item := range items {
+		if item.ParentID == nil && item.Name == name {
 			return true
 		}
 	}
