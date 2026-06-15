@@ -928,6 +928,16 @@ func reportWindow(req ReportRequest, loc *time.Location) (timeutil.Window, error
 		}
 		return timeutil.Window{Start: start, End: end.AddDate(0, 0, 1)}, nil
 	}
+	startMonth, endMonth, err := normalizeReportMonths(req)
+	if err != nil {
+		return timeutil.Window{}, err
+	}
+	start := time.Date(req.Year, time.Month(startMonth), 1, 0, 0, 0, 0, loc)
+	end := time.Date(req.Year, time.Month(endMonth), 1, 0, 0, 0, 0, loc).AddDate(0, 1, 0)
+	return timeutil.Window{Start: start, End: end}, nil
+}
+
+func normalizeReportMonths(req ReportRequest) (int, int, error) {
 	startMonth := req.StartMonth
 	endMonth := req.EndMonth
 	if startMonth == 0 && endMonth == 0 {
@@ -941,11 +951,9 @@ func reportWindow(req ReportRequest, loc *time.Location) (timeutil.Window, error
 		endMonth = startMonth
 	}
 	if req.Year == 0 || startMonth < 1 || startMonth > 12 || endMonth < 1 || endMonth > 12 || startMonth > endMonth {
-		return timeutil.Window{}, errors.New("invalid report month")
+		return 0, 0, errors.New("invalid report month")
 	}
-	start := time.Date(req.Year, time.Month(startMonth), 1, 0, 0, 0, 0, loc)
-	end := time.Date(req.Year, time.Month(endMonth), 1, 0, 0, 0, 0, loc).AddDate(0, 1, 0)
-	return timeutil.Window{Start: start, End: end}, nil
+	return startMonth, endMonth, nil
 }
 
 func parseManualEntryTimes(req CreateTimeEntryRequest) (time.Time, time.Time, error) {
