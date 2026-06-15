@@ -116,13 +116,15 @@ type TimeDay struct {
 }
 
 type ReportRequest struct {
-	Mode      string `json:"mode"`
-	Month     int    `json:"month"`
-	Year      int    `json:"year"`
-	StartDate string `json:"startDate"`
-	EndDate   string `json:"endDate"`
-	ProjectID int64  `json:"projectId"`
-	Language  string `json:"language"`
+	Mode       string `json:"mode"`
+	Month      int    `json:"month"`
+	StartMonth int    `json:"startMonth"`
+	EndMonth   int    `json:"endMonth"`
+	Year       int    `json:"year"`
+	StartDate  string `json:"startDate"`
+	EndDate    string `json:"endDate"`
+	ProjectID  int64  `json:"projectId"`
+	Language   string `json:"language"`
 }
 
 type WorktimeByMonthReport struct {
@@ -926,10 +928,24 @@ func reportWindow(req ReportRequest, loc *time.Location) (timeutil.Window, error
 		}
 		return timeutil.Window{Start: start, End: end.AddDate(0, 0, 1)}, nil
 	}
-	if req.Year == 0 || req.Month < 1 || req.Month > 12 {
+	startMonth := req.StartMonth
+	endMonth := req.EndMonth
+	if startMonth == 0 && endMonth == 0 {
+		startMonth = req.Month
+		endMonth = req.Month
+	}
+	if startMonth == 0 {
+		startMonth = endMonth
+	}
+	if endMonth == 0 {
+		endMonth = startMonth
+	}
+	if req.Year == 0 || startMonth < 1 || startMonth > 12 || endMonth < 1 || endMonth > 12 || startMonth > endMonth {
 		return timeutil.Window{}, errors.New("invalid report month")
 	}
-	return timeutil.MonthWindow(req.Year, time.Month(req.Month), loc), nil
+	start := time.Date(req.Year, time.Month(startMonth), 1, 0, 0, 0, 0, loc)
+	end := time.Date(req.Year, time.Month(endMonth), 1, 0, 0, 0, 0, loc).AddDate(0, 1, 0)
+	return timeutil.Window{Start: start, End: end}, nil
 }
 
 func parseManualEntryTimes(req CreateTimeEntryRequest) (time.Time, time.Time, error) {
