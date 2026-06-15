@@ -29,6 +29,7 @@ import {
 } from "../../wailsjs/go/guiapp/App";
 import type { guiapp } from "../../wailsjs/go/models";
 import { translations, type Language } from "../dashboard/translations";
+import { labelWorkItemName } from "../dashboard/workItemUtils";
 import { ReportFilterBar } from "./ReportFilterBar";
 import { GroupedByProjectTable, ProjectDetailsTable, TaskDetailsTable, TimesheetTable, WorktimeByMonthTable } from "./ReportTables";
 import { ReportsNavigation } from "./ReportsNavigation";
@@ -53,6 +54,10 @@ export function ReportsPage({ activeReport, language, workItems }: ReportsPagePr
   const projectOptions = useMemo(
     () => workItems.filter((item) => item.parentId == null && item.name.toLowerCase() !== "default"),
     [workItems]
+  );
+  const selectedProject = useMemo(
+    () => projectOptions.find((project) => project.id === filter.projectId) ?? null,
+    [filter.projectId, projectOptions]
   );
 
   useEffect(() => {
@@ -81,6 +86,11 @@ export function ReportsPage({ activeReport, language, workItems }: ReportsPagePr
         <div className="project-detail-header">
           <div>
             <h1>{t.titles[definition.slug]}</h1>
+            {activeReport === "worktime-project-details" && selectedProject ? (
+              <p className="report-subtitle">
+                {t.columns.project}: {labelWorkItemName(selectedProject.name, language)}
+              </p>
+            ) : null}
           </div>
         </div>
         <ReportFilterBar
@@ -104,7 +114,7 @@ export function ReportsPage({ activeReport, language, workItems }: ReportsPagePr
         ) : null}
         {error ? <div className="errors alert alert-error">{error}</div> : null}
         {isLoading ? <p className="projects-empty">{t.loadingReport}</p> : null}
-        {!isLoading && data?.report === activeReport ? renderReport(activeReport, data.value, showDecimal, t) : null}
+        {!isLoading && data?.report === activeReport ? renderReport(activeReport, data.value, showDecimal, language, t) : null}
       </section>
     </section>
   );
@@ -144,18 +154,18 @@ async function exportActiveReport(activeReport: ReportSlug, filter: ReportFilter
   return ExportWorktimeByMonthReport(request);
 }
 
-function renderReport(activeReport: ReportSlug, data: ReportData, showDecimal: boolean, t: ReportsPageText) {
+function renderReport(activeReport: ReportSlug, data: ReportData, showDecimal: boolean, language: Language, t: ReportsPageText) {
   if (activeReport === "worktime-grouped-by-project") {
-    return <GroupedByProjectTable report={data as guiapp.WorktimeGroupedByProjectReport} t={t} />;
+    return <GroupedByProjectTable language={language} report={data as guiapp.WorktimeGroupedByProjectReport} showDecimal={showDecimal} t={t} />;
   }
   if (activeReport === "worktime-project-details") {
-    return <ProjectDetailsTable report={data as guiapp.WorktimeProjectDetailsReport} t={t} />;
+    return <ProjectDetailsTable language={language} report={data as guiapp.WorktimeProjectDetailsReport} showDecimal={showDecimal} t={t} />;
   }
   if (activeReport === "worktime-task-details") {
-    return <TaskDetailsTable report={data as guiapp.WorktimeTaskDetailsReport} t={t} />;
+    return <TaskDetailsTable language={language} report={data as guiapp.WorktimeTaskDetailsReport} showDecimal={showDecimal} t={t} />;
   }
   if (activeReport === "timesheet") {
-    return <TimesheetTable report={data as guiapp.TimesheetReport} showDecimal={showDecimal} t={t} />;
+    return <TimesheetTable language={language} report={data as guiapp.TimesheetReport} showDecimal={showDecimal} t={t} />;
   }
-  return <WorktimeByMonthTable report={data as guiapp.WorktimeByMonthReport} t={t} />;
+  return <WorktimeByMonthTable language={language} report={data as guiapp.WorktimeByMonthReport} showDecimal={showDecimal} t={t} />;
 }

@@ -31,6 +31,8 @@ export function defaultReportFilter(): ReportFilter {
   return {
     mode: "monthly",
     month: now.getMonth() + 1,
+    startMonth: now.getMonth() + 1,
+    endMonth: now.getMonth() + 1,
     year: now.getFullYear(),
     startDate: formatInputDate(new Date(now.getFullYear(), now.getMonth(), 1)),
     endDate: formatInputDate(now),
@@ -41,7 +43,9 @@ export function defaultReportFilter(): ReportFilter {
 export function toReportRequest(filter: ReportFilter, language: string): guiapp.ReportRequest {
   return {
     mode: filter.mode,
-    month: filter.month,
+    month: filter.startMonth,
+    startMonth: filter.startMonth,
+    endMonth: filter.endMonth,
     year: filter.year,
     startDate: filter.startDate,
     endDate: filter.endDate,
@@ -50,14 +54,15 @@ export function toReportRequest(filter: ReportFilter, language: string): guiapp.
   } as guiapp.ReportRequest;
 }
 
-export function formatDecimalDuration(duration: string): string {
+export function formatDecimalDuration(duration: string, language: string): string {
   const match = /^(\d+):(\d{2})$/.exec(duration);
   if (!match) {
     return duration;
   }
   const hours = Number(match[1]);
   const minutes = Number(match[2]);
-  return (hours + minutes / 60).toFixed(2);
+  const decimal = (hours + minutes / 60).toFixed(2);
+  return `${language === "de" ? decimal.replace(".", ",") : decimal} h`;
 }
 
 export function fileURL(path: string): string {

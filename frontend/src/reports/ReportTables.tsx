@@ -20,11 +20,17 @@ import { formatDecimalDuration } from "./reportUtils";
 import type { ReportsPageText } from "./reportTypes";
 
 type ReportTableProps<T> = {
+  language: string;
   report: T;
+  showDecimal: boolean;
   t: ReportsPageText;
 };
 
-export function WorktimeByMonthTable({ report, t }: ReportTableProps<guiapp.WorktimeByMonthReport>) {
+function displayDuration(duration: string, showDecimal: boolean, language: string): string {
+  return showDecimal ? formatDecimalDuration(duration, language) : duration;
+}
+
+export function WorktimeByMonthTable({ language, report, showDecimal, t }: ReportTableProps<guiapp.WorktimeByMonthReport>) {
   const rows = report.rows ?? [];
   if (report.empty || !rows.length) return <p className="projects-empty">{t.emptyReport}</p>;
   return (
@@ -36,20 +42,20 @@ export function WorktimeByMonthTable({ report, t }: ReportTableProps<guiapp.Work
           <td>{row.date}</td>
           <td>{row.startTime}</td>
           <td>{row.endTime}</td>
-          <td>{row.duration}</td>
+          <td>{displayDuration(row.duration, showDecimal, language)}</td>
           <td className="report-note-cell">{row.description}</td>
         </tr>
       ))}
       <tr>
         <td colSpan={5}></td>
-        <td><strong>{report.totalDuration}</strong></td>
+        <td><strong>{displayDuration(report.totalDuration, showDecimal, language)}</strong></td>
         <td></td>
       </tr>
     </ReportTable>
   );
 }
 
-export function GroupedByProjectTable({ report, t }: ReportTableProps<guiapp.WorktimeGroupedByProjectReport>) {
+export function GroupedByProjectTable({ language, report, showDecimal, t }: ReportTableProps<guiapp.WorktimeGroupedByProjectReport>) {
   const groups = report.groups ?? [];
   if (report.empty || !groups.length) return <p className="projects-empty">{t.emptyReport}</p>;
   return (
@@ -64,13 +70,13 @@ export function GroupedByProjectTable({ report, t }: ReportTableProps<guiapp.Wor
                 <td>{row.date}</td>
                 <td>{row.startTime}</td>
                 <td>{row.endTime}</td>
-                <td>{row.duration}</td>
+                <td>{displayDuration(row.duration, showDecimal, language)}</td>
                 <td className="report-note-cell">{row.description}</td>
               </tr>
             ))}
             <tr>
               <td colSpan={4}></td>
-              <td><strong>{group.totalDuration}</strong></td>
+              <td><strong>{displayDuration(group.totalDuration, showDecimal, language)}</strong></td>
               <td></td>
             </tr>
           </ReportTable>
@@ -80,7 +86,7 @@ export function GroupedByProjectTable({ report, t }: ReportTableProps<guiapp.Wor
   );
 }
 
-export function ProjectDetailsTable({ report, t }: ReportTableProps<guiapp.WorktimeProjectDetailsReport>) {
+export function ProjectDetailsTable({ language, report, showDecimal, t }: ReportTableProps<guiapp.WorktimeProjectDetailsReport>) {
   const rows = report.rows ?? [];
   if (report.empty || !rows.length) return <p className="projects-empty">{t.emptyReport}</p>;
   return (
@@ -91,20 +97,20 @@ export function ProjectDetailsTable({ report, t }: ReportTableProps<guiapp.Workt
           <td>{row.date}</td>
           <td>{row.startTime}</td>
           <td>{row.endTime}</td>
-          <td>{row.duration}</td>
+          <td>{displayDuration(row.duration, showDecimal, language)}</td>
           <td className="report-note-cell">{row.description}</td>
         </tr>
       ))}
       <tr>
         <td colSpan={4}></td>
-        <td><strong>{report.totalDuration}</strong></td>
+        <td><strong>{displayDuration(report.totalDuration, showDecimal, language)}</strong></td>
         <td></td>
       </tr>
     </ReportTable>
   );
 }
 
-export function TaskDetailsTable({ report, t }: ReportTableProps<guiapp.WorktimeTaskDetailsReport>) {
+export function TaskDetailsTable({ language, report, showDecimal, t }: ReportTableProps<guiapp.WorktimeTaskDetailsReport>) {
   const rows = report.rows ?? [];
   if (report.empty || !rows.length) return <p className="projects-empty">{t.emptyReport}</p>;
   return (
@@ -113,18 +119,18 @@ export function TaskDetailsTable({ report, t }: ReportTableProps<guiapp.Worktime
         <tr key={`${row.projectId}-${row.taskId}`}>
           <td>{row.projectName}</td>
           <td>{row.taskName}</td>
-          <td>{row.duration}</td>
+          <td>{displayDuration(row.duration, showDecimal, language)}</td>
         </tr>
       ))}
       <tr>
         <td colSpan={2}></td>
-        <td><strong>{report.totalDuration}</strong></td>
+        <td><strong>{displayDuration(report.totalDuration, showDecimal, language)}</strong></td>
       </tr>
     </ReportTable>
   );
 }
 
-export function TimesheetTable({ report, showDecimal, t }: ReportTableProps<guiapp.TimesheetReport> & { showDecimal: boolean }) {
+export function TimesheetTable({ language, report, showDecimal, t }: ReportTableProps<guiapp.TimesheetReport>) {
   if (report.empty) return <p className="projects-empty">{t.emptyReport}</p>;
   const dailyRows = report.dailyRows ?? [];
   const projectRows = report.projectRows ?? [];
@@ -134,14 +140,14 @@ export function TimesheetTable({ report, showDecimal, t }: ReportTableProps<guia
         {dailyRows.map((row) => (
           <tr key={row.date}>
             <td>{row.date}</td>
-            <td>{showDecimal ? formatDecimalDuration(row.totalDuration) : row.totalDuration}</td>
-            <td>{showDecimal ? formatDecimalDuration(row.projectDuration) : row.projectDuration}</td>
+            <td>{displayDuration(row.totalDuration, showDecimal, language)}</td>
+            <td>{displayDuration(row.projectDuration, showDecimal, language)}</td>
           </tr>
         ))}
         <tr>
           <td></td>
-          <td><strong>{showDecimal ? formatDecimalDuration(report.totalDuration) : report.totalDuration}</strong></td>
-          <td><strong>{showDecimal ? formatDecimalDuration(report.totalDuration) : report.totalDuration}</strong></td>
+          <td><strong>{displayDuration(report.totalDuration, showDecimal, language)}</strong></td>
+          <td><strong>{displayDuration(report.totalDuration, showDecimal, language)}</strong></td>
         </tr>
       </ReportTable>
     );
@@ -153,12 +159,12 @@ export function TimesheetTable({ report, showDecimal, t }: ReportTableProps<guia
         {projectRows.map((row) => (
           <tr key={row.projectId}>
             <td>{row.projectName}</td>
-            <td>{showDecimal ? formatDecimalDuration(row.duration) : row.duration}</td>
+            <td>{displayDuration(row.duration, showDecimal, language)}</td>
           </tr>
         ))}
         <tr>
           <td></td>
-          <td><strong>{showDecimal ? formatDecimalDuration(report.totalDuration) : report.totalDuration}</strong></td>
+          <td><strong>{displayDuration(report.totalDuration, showDecimal, language)}</strong></td>
         </tr>
       </ReportTable>
     </section>

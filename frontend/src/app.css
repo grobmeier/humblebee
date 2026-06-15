@@ -426,6 +426,13 @@ code {
   font-size: 28px;
 }
 
+.report-subtitle {
+  margin: 4px 0 0;
+  color: #555;
+  font-size: 15px;
+  font-weight: 700;
+}
+
 .project-detail-actions {
   display: flex;
   flex-wrap: wrap;
