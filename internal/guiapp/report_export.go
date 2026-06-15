@@ -238,7 +238,22 @@ func reportPeriodSlug(req ReportRequest) string {
 	if req.Mode == "daily" {
 		return req.StartDate + "_to_" + req.EndDate
 	}
-	return fmt.Sprintf("%04d-%02d", req.Year, req.Month)
+	startMonth := req.StartMonth
+	endMonth := req.EndMonth
+	if startMonth == 0 && endMonth == 0 {
+		startMonth = req.Month
+		endMonth = req.Month
+	}
+	if startMonth == 0 {
+		startMonth = endMonth
+	}
+	if endMonth == 0 {
+		endMonth = startMonth
+	}
+	if startMonth != endMonth {
+		return fmt.Sprintf("%04d-%02d_to_%04d-%02d", req.Year, startMonth, req.Year, endMonth)
+	}
+	return fmt.Sprintf("%04d-%02d", req.Year, startMonth)
 }
 
 func writeSimpleXLSX(path string, sheetName string, rows [][]string) error {

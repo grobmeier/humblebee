@@ -232,6 +232,8 @@ export namespace guiapp {
 	export class ReportRequest {
 	    mode: string;
 	    month: number;
+	    startMonth: number;
+	    endMonth: number;
 	    year: number;
 	    startDate: string;
 	    endDate: string;
@@ -246,6 +248,8 @@ export namespace guiapp {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.mode = source["mode"];
 	        this.month = source["month"];
+	        this.startMonth = source["startMonth"];
+	        this.endMonth = source["endMonth"];
 	        this.year = source["year"];
 	        this.startDate = source["startDate"];
 	        this.endDate = source["endDate"];
@@ -705,4 +709,3 @@ export namespace guiapp {
 	}
 
 }
-

@@ -446,6 +446,50 @@ func TestGetWorktimeByMonthReportShowsMonthlyTimeRows(t *testing.T) {
 	}
 }
 
+func TestGetWorktimeByMonthReportSupportsMonthlyRange(t *testing.T) {
+	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
+
+	app := New()
+	if err := app.Init("user@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	project, err := app.CreateProject("Client")
+	if err != nil {
+		t.Fatal(err)
+	}
+	task, err := app.CreateTask(project.ID, "Research")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, startDate := range []string{"2026-05-20", "2026-06-04", "2026-07-01"} {
+		if _, err := app.CreateTimeEntry(CreateTimeEntryRequest{
+			WorkItemID: task.ID,
+			StartDate:  startDate,
+			StartTime:  "09:00",
+			EndDate:    startDate,
+			EndTime:    "10:00",
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	report, err := app.GetWorktimeByMonthReport(ReportRequest{
+		Mode:       "monthly",
+		StartMonth: 5,
+		EndMonth:   6,
+		Year:       2026,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.TotalSeconds != 7200 || report.TotalDuration != "02:00" {
+		t.Fatalf("expected May and June total only, got %d %q", report.TotalSeconds, report.TotalDuration)
+	}
+	if len(report.Rows) != 2 {
+		t.Fatalf("expected two rows for May and June, got %#v", report.Rows)
+	}
+}
+
 func TestGetWorktimeProjectDetailsReportShowsSelectedProjectEntries(t *testing.T) {
 	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
 
@@ -993,7 +1037,7 @@ func TestExportWorktimeProjectDetailsReportPreservesMultilineNotes(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	note := "Line one │ äöü & <tag>\nLine two \"quoted\""
+	note := "Line one │ äöü & <tag>\nLine two • \"quoted\""
 	if _, err := app.CreateTimeEntry(CreateTimeEntryRequest{
 		WorkItemID:  task.ID,
 		StartDate:   "2026-06-04",
@@ -1018,7 +1062,7 @@ func TestExportWorktimeProjectDetailsReportPreservesMultilineNotes(t *testing.T)
 		t.Fatalf("expected project-specific export filename, got %q", path)
 	}
 	worksheet := readXLSXWorksheet(t, path)
-	for _, want := range []string{"Line one │ äöü", "Line two &quot;quoted&quot;", "&amp;", "&lt;tag&gt;"} {
+	for _, want := range []string{"Line one │ äöü", "Line two • &quot;quoted&quot;", "&amp;", "&lt;tag&gt;"} {
 		if !strings.Contains(worksheet, want) {
 			t.Fatalf("expected worksheet to contain %q, got %s", want, worksheet)
 		}
