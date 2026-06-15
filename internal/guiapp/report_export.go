@@ -231,29 +231,25 @@ func reportExportPath(slug string, req ReportRequest) (string, error) {
 	if err := os.MkdirAll(exportDir, 0o755); err != nil {
 		return "", err
 	}
-	return filepath.Join(exportDir, fmt.Sprintf("humblebee-%s-%s.xlsx", slug, reportPeriodSlug(req))), nil
+	period, err := reportPeriodSlug(req)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(exportDir, fmt.Sprintf("humblebee-%s-%s.xlsx", slug, period)), nil
 }
 
-func reportPeriodSlug(req ReportRequest) string {
+func reportPeriodSlug(req ReportRequest) (string, error) {
 	if req.Mode == "daily" {
-		return req.StartDate + "_to_" + req.EndDate
+		return req.StartDate + "_to_" + req.EndDate, nil
 	}
-	startMonth := req.StartMonth
-	endMonth := req.EndMonth
-	if startMonth == 0 && endMonth == 0 {
-		startMonth = req.Month
-		endMonth = req.Month
-	}
-	if startMonth == 0 {
-		startMonth = endMonth
-	}
-	if endMonth == 0 {
-		endMonth = startMonth
+	startMonth, endMonth, err := normalizeReportMonths(req)
+	if err != nil {
+		return "", err
 	}
 	if startMonth != endMonth {
-		return fmt.Sprintf("%04d-%02d_to_%04d-%02d", req.Year, startMonth, req.Year, endMonth)
+		return fmt.Sprintf("%04d-%02d_to_%04d-%02d", req.Year, startMonth, req.Year, endMonth), nil
 	}
-	return fmt.Sprintf("%04d-%02d", req.Year, startMonth)
+	return fmt.Sprintf("%04d-%02d", req.Year, startMonth), nil
 }
 
 func writeSimpleXLSX(path string, sheetName string, rows [][]string) error {
