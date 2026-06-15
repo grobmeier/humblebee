@@ -122,6 +122,7 @@ export const translations = {
       exportExcel: "Excel exportieren",
       filterMode: "Berichtsfilter",
       firstReportableProject: "Erstes auswertbares Projekt",
+      fromMonth: "Von Monat",
       loadingReport: "Bericht wird geladen...",
       monthly: "Monatlich",
       months: ["Januar", "Februar", "Maerz", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"],
@@ -129,6 +130,7 @@ export const translations = {
       reportList: "Berichte",
       savedTo: "Gespeichert unter",
       selectProject: "Projekt auswaehlen",
+      toMonth: "Bis Monat",
       titles: {
         "worktime-by-month": "Arbeitszeit pro Monat",
         "worktime-grouped-by-project": "Arbeitszeit nach Projekt",
@@ -266,6 +268,7 @@ export const translations = {
       exportExcel: "Export Excel",
       filterMode: "Report filter mode",
       firstReportableProject: "First reportable project",
+      fromMonth: "From month",
       loadingReport: "Loading report...",
       monthly: "Monthly",
       months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
@@ -273,6 +276,7 @@ export const translations = {
       reportList: "Reports",
       savedTo: "Saved to",
       selectProject: "Select project",
+      toMonth: "To month",
       titles: {
         "worktime-by-month": "Worktime by month",
         "worktime-grouped-by-project": "Worktime grouped by project",
@@ -410,6 +414,7 @@ export const translations = {
     exportExcel: string;
     filterMode: string;
     firstReportableProject: string;
+    fromMonth: string;
     loadingReport: string;
     monthly: string;
     months: string[];
@@ -417,6 +422,7 @@ export const translations = {
     reportList: string;
     savedTo: string;
     selectProject: string;
+    toMonth: string;
     titles: {
       "worktime-by-month": string;
       "worktime-grouped-by-project": string;

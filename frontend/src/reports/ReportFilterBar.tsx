@@ -49,6 +49,15 @@ export function ReportFilterBar({
   onPrint,
   onToggleDecimal
 }: ReportFilterBarProps) {
+  function changeStartMonth(startMonth: number) {
+    onChange({ ...filter, startMonth, endMonth: Math.max(startMonth, filter.endMonth), month: startMonth });
+  }
+
+  function changeEndMonth(endMonth: number) {
+    const startMonth = Math.min(filter.startMonth, endMonth);
+    onChange({ ...filter, startMonth, endMonth, month: startMonth });
+  }
+
   return (
     <div className="report-filter-panel hide-print">
       <div className="report-filter-tabs" role="tablist" aria-label={t.filterMode}>
@@ -72,7 +81,25 @@ export function ReportFilterBar({
         ) : null}
         {filter.mode === "monthly" ? (
           <>
-            <select className="tab-form-control tab-form-control--small" value={filter.month} onChange={(event) => onChange({ ...filter, month: Number(event.target.value) })}>
+            <select
+              aria-label={t.fromMonth}
+              className="tab-form-control tab-form-control--small"
+              value={filter.startMonth}
+              onChange={(event) => changeStartMonth(Number(event.target.value))}
+            >
+              {monthOptions(t.months).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <span className="report-filter-separator">-</span>
+            <select
+              aria-label={t.toMonth}
+              className="tab-form-control tab-form-control--small"
+              value={filter.endMonth}
+              onChange={(event) => changeEndMonth(Number(event.target.value))}
+            >
               {monthOptions(t.months).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
@@ -106,7 +133,7 @@ export function ReportFilterBar({
         </button>
         {supportsDecimal ? (
           <button className="secondary-button" type="button" onClick={onToggleDecimal}>
-            {showDecimal ? "0:00" : "0.00"}
+            {showDecimal ? "0:00" : language === "de" ? "0,00 h" : "0.00 h"}
           </button>
         ) : null}
       </div>

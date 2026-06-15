@@ -23,6 +23,8 @@ export type ReportMode = "monthly" | "daily";
 export type ReportFilter = {
   mode: ReportMode;
   month: number;
+  startMonth: number;
+  endMonth: number;
   year: number;
   startDate: string;
   endDate: string;
@@ -54,6 +56,7 @@ export type ReportsPageText = {
   exportExcel: string;
   filterMode: string;
   firstReportableProject: string;
+  fromMonth: string;
   loadingReport: string;
   months: string[];
   monthly: string;
@@ -61,14 +64,15 @@ export type ReportsPageText = {
   reportList: string;
   savedTo: string;
   selectProject: string;
+  toMonth: string;
   dateRange: string;
   titles: Record<ReportSlug, string>;
 };
 
 export const reportDefinitions: Array<{ slug: ReportSlug; needsProject: boolean; requiresExplicitProject: boolean; decimalToggle: boolean }> = [
-  { slug: "worktime-by-month", needsProject: false, requiresExplicitProject: false, decimalToggle: false },
-  { slug: "worktime-grouped-by-project", needsProject: false, requiresExplicitProject: false, decimalToggle: false },
-  { slug: "worktime-project-details", needsProject: true, requiresExplicitProject: true, decimalToggle: false },
-  { slug: "worktime-task-details", needsProject: true, requiresExplicitProject: false, decimalToggle: false },
+  { slug: "worktime-by-month", needsProject: false, requiresExplicitProject: false, decimalToggle: true },
+  { slug: "worktime-grouped-by-project", needsProject: false, requiresExplicitProject: false, decimalToggle: true },
+  { slug: "worktime-project-details", needsProject: true, requiresExplicitProject: true, decimalToggle: true },
+  { slug: "worktime-task-details", needsProject: true, requiresExplicitProject: false, decimalToggle: true },
   { slug: "timesheet", needsProject: false, requiresExplicitProject: false, decimalToggle: true }
 ];
