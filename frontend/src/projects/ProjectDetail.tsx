@@ -18,7 +18,7 @@ import { ProjectActions } from "./ProjectActions";
 import { ProjectTaskList } from "./ProjectTaskList";
 import type { DateLanguage } from "../dashboard/dateFormat";
 import { labelWorkItemName } from "../dashboard/workItemUtils";
-import type { ProjectsPageText, WorkItem } from "./projectTypes";
+import { isArchivedWorkItem, type ProjectsPageText, type WorkItem } from "./projectTypes";
 
 type ProjectDetailProps = {
   canToggleHiddenTasks: boolean;
@@ -29,8 +29,10 @@ type ProjectDetailProps = {
   t: ProjectsPageText;
   tasks: WorkItem[];
   onAddTask: (project: WorkItem) => void;
+  onArchiveProject: (project: WorkItem) => void;
   onDeleteProject: (project: WorkItem) => void;
   onEditProject: (project: WorkItem) => void;
+  onReactivateProject: (project: WorkItem) => void;
   onToggleHiddenTasks: () => void;
   onToggleTaskCompleted: (task: WorkItem, completed: boolean) => void;
 };
@@ -44,8 +46,10 @@ export function ProjectDetail({
   t,
   tasks,
   onAddTask,
+  onArchiveProject,
   onDeleteProject,
   onEditProject,
+  onReactivateProject,
   onToggleHiddenTasks,
   onToggleTaskCompleted
 }: ProjectDetailProps) {
@@ -65,11 +69,14 @@ export function ProjectDetail({
         </div>
         <ProjectActions
           canToggleHiddenTasks={canToggleHiddenTasks}
+          isArchivedProject={isArchivedWorkItem(selectedProject)}
           showHiddenTasks={showHiddenTasks}
           t={t}
           onAddTask={() => onAddTask(selectedProject)}
+          onArchiveProject={() => onArchiveProject(selectedProject)}
           onDeleteProject={() => onDeleteProject(selectedProject)}
           onEditProject={() => onEditProject(selectedProject)}
+          onReactivateProject={() => onReactivateProject(selectedProject)}
           onToggleHiddenTasks={onToggleHiddenTasks}
         />
       </div>

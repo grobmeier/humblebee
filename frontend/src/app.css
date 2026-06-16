@@ -422,6 +422,12 @@ code {
   font-size: 22px;
 }
 
+.side-navigation-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .project-detail-header h1 {
   font-size: 28px;
 }
@@ -570,6 +576,15 @@ code {
 .side-navigation-item.selected {
   border-left-color: #0a85c5;
   background: #f1f8fc;
+}
+
+.side-navigation-item.is-archived-project {
+  background: #f7f7f7;
+  color: #777;
+}
+
+.side-navigation-item.is-archived-project.selected {
+  background: #eef4f7;
 }
 
 .project-task-row {

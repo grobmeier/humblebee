@@ -126,6 +126,10 @@ export function SelectNewDatabaseFile() {
   return window['go']['guiapp']['App']['SelectNewDatabaseFile']();
 }
 
+export function SetProjectActive(arg1, arg2) {
+  return window['go']['guiapp']['App']['SetProjectActive'](arg1, arg2);
+}
+
 export function SetTaskActive(arg1, arg2) {
   return window['go']['guiapp']['App']['SetTaskActive'](arg1, arg2);
 }

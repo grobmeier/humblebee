@@ -14,28 +14,53 @@
  * limitations under the License.
  */
 
-import { EditIcon, EyeIcon, TrashIcon } from "./ProjectIcons";
+import { ArchiveIcon, EditIcon, EyeIcon, TrashIcon } from "./ProjectIcons";
 import type { ProjectsPageText } from "./projectTypes";
 
 type ProjectActionsProps = {
   canToggleHiddenTasks: boolean;
+  isArchivedProject: boolean;
   showHiddenTasks: boolean;
   t: ProjectsPageText;
   onAddTask: () => void;
+  onArchiveProject: () => void;
   onDeleteProject: () => void;
   onEditProject: () => void;
+  onReactivateProject: () => void;
   onToggleHiddenTasks: () => void;
 };
 
 export function ProjectActions({
   canToggleHiddenTasks,
+  isArchivedProject,
   showHiddenTasks,
   t,
   onAddTask,
+  onArchiveProject,
   onDeleteProject,
   onEditProject,
+  onReactivateProject,
   onToggleHiddenTasks
 }: ProjectActionsProps) {
+  if (isArchivedProject) {
+    return (
+      <div className="project-detail-actions">
+        <button className="primary-button" type="button" onClick={onReactivateProject}>
+          {t.reactivateProject}
+        </button>
+        <button
+          className="icon-button danger-icon-button"
+          type="button"
+          onClick={onDeleteProject}
+          aria-label={t.deleteProject}
+          title={t.deleteProject}
+        >
+          <TrashIcon />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="project-detail-actions">
       <button
@@ -53,6 +78,9 @@ export function ProjectActions({
       </button>
       <button className="primary-button" type="button" onClick={onAddTask}>
         {t.addTask}
+      </button>
+      <button className="icon-button" type="button" onClick={onArchiveProject} aria-label={t.archiveProject} title={t.archiveProject}>
+        <ArchiveIcon />
       </button>
       <button
         className="icon-button danger-icon-button"

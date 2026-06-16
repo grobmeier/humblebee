@@ -20,7 +20,7 @@ import { ProjectDetail } from "./ProjectDetail";
 import { ProjectNameModal } from "./ProjectNameModal";
 import { ProjectsList } from "./ProjectsList";
 import type { DateLanguage } from "../dashboard/dateFormat";
-import { isActiveTask, type ProjectModalState, type ProjectsPageText, type WorkItem } from "./projectTypes";
+import { isActiveTask, isArchivedWorkItem, type ProjectModalState, type ProjectsPageText, type WorkItem } from "./projectTypes";
 
 type ProjectsPageProps = {
   language: DateLanguage;
@@ -31,6 +31,7 @@ type ProjectsPageProps = {
   onCreateTask: (projectId: number, name: string) => Promise<void>;
   onDeleteProject: (projectId: number) => Promise<void>;
   onSelectProject: (projectId: number) => void;
+  onSetProjectActive: (projectId: number, active: boolean) => Promise<void>;
   onSetTaskActive: (taskId: number, active: boolean) => Promise<void>;
   onUpdateProject: (projectId: number, name: string) => Promise<void>;
 };
@@ -44,13 +45,17 @@ export function ProjectsPage({
   onCreateTask,
   onDeleteProject,
   onSelectProject,
+  onSetProjectActive,
   onSetTaskActive,
   onUpdateProject
 }: ProjectsPageProps) {
-  const projects = useMemo(
-    () => workItems.filter((item) => item.parentId == null && item.name.toLowerCase() !== "default" && isActiveTask(item)),
+  const allProjects = useMemo(
+    () => workItems.filter((item) => item.parentId == null && item.name.toLowerCase() !== "default"),
     [workItems]
   );
+  const activeProjects = useMemo(() => allProjects.filter(isActiveTask), [allProjects]);
+  const [showArchivedProjects, setShowArchivedProjects] = useState(false);
+  const projects = showArchivedProjects ? allProjects : activeProjects;
   const selectedProject = projects.find((project) => project.id === selectedProjectId) ?? projects[0] ?? null;
   const tasks = selectedProject ? workItems.filter((item) => item.parentId === selectedProject.id) : [];
   const [modal, setModal] = useState<ProjectModalState>(null);
@@ -59,8 +64,9 @@ export function ProjectsPage({
   const [isSaving, setIsSaving] = useState(false);
   const [copySourceProjectId, setCopySourceProjectId] = useState(0);
   const [showHiddenTasks, setShowHiddenTasks] = useState(false);
+  const hasArchivedProjects = allProjects.some(isArchivedWorkItem);
   const hasHiddenTasks = tasks.some((task) => !isActiveTask(task));
-  const visibleTasks = showHiddenTasks ? tasks : tasks.filter(isActiveTask);
+  const visibleTasks = selectedProject && isArchivedWorkItem(selectedProject) ? tasks : showHiddenTasks ? tasks : tasks.filter(isActiveTask);
 
   useEffect(() => {
     if (!selectedProject && projects.length) {
@@ -77,6 +83,12 @@ export function ProjectsPage({
       setShowHiddenTasks(false);
     }
   }, [hasHiddenTasks, showHiddenTasks]);
+
+  useEffect(() => {
+    if (!hasArchivedProjects && showArchivedProjects) {
+      setShowArchivedProjects(false);
+    }
+  }, [hasArchivedProjects, showArchivedProjects]);
 
   function openCreateProjectModal() {
     setModal({ type: "create-project" });
@@ -174,15 +186,30 @@ export function ProjectsPage({
     }
   }
 
+  async function setProjectActive(project: WorkItem, active: boolean) {
+    setError(null);
+    try {
+      await onSetProjectActive(project.id, active);
+      if (!active) {
+        setShowArchivedProjects(false);
+      }
+    } catch (err) {
+      setError(String(err));
+    }
+  }
+
   return (
     <section className="projects-page" id="projects">
       <ProjectsList
+        canToggleArchivedProjects={hasArchivedProjects}
         language={language}
         projects={projects}
         selectedProjectId={selectedProject?.id}
+        showArchivedProjects={showArchivedProjects}
         t={t}
         onCreateProject={openCreateProjectModal}
         onSelectProject={onSelectProject}
+        onToggleArchivedProjects={() => setShowArchivedProjects((value) => !value)}
       />
       <ProjectDetail
         error={error}
@@ -193,8 +220,10 @@ export function ProjectsPage({
         t={t}
         tasks={visibleTasks}
         onAddTask={openCreateTaskModal}
+        onArchiveProject={(project) => void setProjectActive(project, false)}
         onDeleteProject={openDeleteProjectModal}
         onEditProject={openEditProjectModal}
+        onReactivateProject={(project) => void setProjectActive(project, true)}
         onToggleHiddenTasks={() => setShowHiddenTasks((value) => !value)}
         onToggleTaskCompleted={toggleTaskCompleted}
       />
@@ -224,7 +253,7 @@ export function ProjectsPage({
         language={language}
         modal={activeModal}
         name={name}
-        projects={projects}
+        projects={activeProjects}
         t={t}
         onChange={setName}
         onClose={closeModal}

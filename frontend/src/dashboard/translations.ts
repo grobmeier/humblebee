@@ -84,6 +84,7 @@ export const translations = {
     projectsPage: {
       addProject: "Projekt hinzufuegen",
       addTask: "Aufgabe hinzufuegen",
+      archiveProject: "Projekt archivieren",
       cancel: "Abbrechen",
       completedTask: "Aufgabe erledigt",
       copyTasksFrom: "Aufgaben kopieren von",
@@ -100,8 +101,10 @@ export const translations = {
       nameRequired: "Bitte gib einen Namen ein.",
       noTaskTemplate: "Keine Aufgaben kopieren",
       projectList: "Projekte",
+      reactivateProject: "Projekt wieder aktivieren",
       saveProject: "Projekt speichern",
       selectProject: "Waehle links ein Projekt aus.",
+      showArchivedProjects: "Archivierte Projekte anzeigen",
       showHiddenTasks: "Ausgeblendete Aufgaben anzeigen",
       tasks: "Aufgaben"
     },
@@ -230,6 +233,7 @@ export const translations = {
     projectsPage: {
       addProject: "Add Project",
       addTask: "Add Task",
+      archiveProject: "Archive Project",
       cancel: "Cancel",
       completedTask: "Task completed",
       copyTasksFrom: "Copy tasks from",
@@ -246,8 +250,10 @@ export const translations = {
       nameRequired: "Enter a name.",
       noTaskTemplate: "Do not copy tasks",
       projectList: "Projects",
+      reactivateProject: "Reactivate Project",
       saveProject: "Save Project",
       selectProject: "Select a project on the left.",
+      showArchivedProjects: "Show archived projects",
       showHiddenTasks: "Show hidden tasks",
       tasks: "Tasks"
     },
@@ -376,6 +382,7 @@ export const translations = {
   projectsPage: {
     addProject: string;
     addTask: string;
+    archiveProject: string;
     cancel: string;
     completedTask: string;
     copyTasksFrom: string;
@@ -392,8 +399,10 @@ export const translations = {
     nameRequired: string;
     noTaskTemplate: string;
     projectList: string;
+    reactivateProject: string;
     saveProject: string;
     selectProject: string;
+    showArchivedProjects: string;
     showHiddenTasks: string;
     tasks: string;
   };

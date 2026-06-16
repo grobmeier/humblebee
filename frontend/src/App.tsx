@@ -37,6 +37,7 @@ import {
   SelectDatabaseFile,
   SelectImportFile,
   SelectNewDatabaseFile,
+  SetProjectActive,
   SetTaskActive,
   Start,
   Stop,
@@ -395,6 +396,20 @@ export default function App() {
     await refreshStopwatches();
     const nextProject = items.find((item) => item.parentId == null && item.name.toLowerCase() !== "default");
     setSelectedProjectPageProjectId(nextProject?.id ?? 0);
+  }
+
+  async function onSetProjectActive(projectId: number, active: boolean) {
+    setError("");
+    await SetProjectActive(projectId, active);
+    if (!active && selectedWorkItemId !== 0) {
+      const selectedItem = projectWorkItems.find((item) => item.id === selectedWorkItemId);
+      if (selectedItem?.id === projectId || selectedItem?.parentId === projectId) {
+        setSelectedWorkItemId(0);
+      }
+    }
+    await refreshWorkItems();
+    await refreshProjectWorkItems();
+    await refreshStopwatches();
   }
 
   async function onSetTaskActive(taskId: number, active: boolean) {
@@ -828,6 +843,7 @@ export default function App() {
             onCreateTask={onCreateTask}
             onDeleteProject={onDeleteProject}
             onSelectProject={setSelectedProjectPageProjectId}
+            onSetProjectActive={onSetProjectActive}
             onSetTaskActive={onSetTaskActive}
             onUpdateProject={onUpdateProject}
           />

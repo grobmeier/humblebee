@@ -17,28 +17,58 @@
 import { SideNavigationList } from "../components/SideNavigationList";
 import type { DateLanguage } from "../dashboard/dateFormat";
 import { labelWorkItemName } from "../dashboard/workItemUtils";
-import type { ProjectsPageText, WorkItem } from "./projectTypes";
+import { EyeIcon } from "./ProjectIcons";
+import { isArchivedWorkItem, type ProjectsPageText, type WorkItem } from "./projectTypes";
 
 type ProjectsListProps = {
+  canToggleArchivedProjects: boolean;
   language: DateLanguage;
   projects: WorkItem[];
   selectedProjectId?: number;
+  showArchivedProjects: boolean;
   t: ProjectsPageText;
   onCreateProject: () => void;
   onSelectProject: (projectId: number) => void;
+  onToggleArchivedProjects: () => void;
 };
 
-export function ProjectsList({ language, projects, selectedProjectId, t, onCreateProject, onSelectProject }: ProjectsListProps) {
+export function ProjectsList({
+  canToggleArchivedProjects,
+  language,
+  projects,
+  selectedProjectId,
+  showArchivedProjects,
+  t,
+  onCreateProject,
+  onSelectProject,
+  onToggleArchivedProjects
+}: ProjectsListProps) {
   return (
     <SideNavigationList
       action={
-        <button className="primary-button" type="button" onClick={onCreateProject}>
-          {t.addProject}
-        </button>
+        <div className="side-navigation-actions">
+          <button
+            className={`icon-button eye-button ${showArchivedProjects && canToggleArchivedProjects ? "active" : ""}`}
+            type="button"
+            disabled={!canToggleArchivedProjects}
+            onClick={onToggleArchivedProjects}
+            aria-label={t.showArchivedProjects}
+            title={t.showArchivedProjects}
+          >
+            <EyeIcon />
+          </button>
+          <button className="primary-button" type="button" onClick={onCreateProject}>
+            {t.addProject}
+          </button>
+        </div>
       }
       ariaLabel={t.projectList}
       emptyText={t.emptyProjects}
-      items={projects.map((project) => ({ id: project.id, label: labelWorkItemName(project.name, language) }))}
+      items={projects.map((project) => ({
+        className: isArchivedWorkItem(project) ? "is-archived-project" : undefined,
+        id: project.id,
+        label: labelWorkItemName(project.name, language)
+      }))}
       selectedId={selectedProjectId}
       title={t.projectList}
       onSelect={(id) => onSelectProject(Number(id))}

@@ -64,6 +64,8 @@ export function SelectImportFile():Promise<string>;
 
 export function SelectNewDatabaseFile():Promise<string>;
 
+export function SetProjectActive(arg1:number,arg2:boolean):Promise<guiapp.WorkItem>;
+
 export function SetTaskActive(arg1:number,arg2:boolean):Promise<guiapp.WorkItem>;
 
 export function Start(arg1:number):Promise<void>;

@@ -1146,6 +1146,88 @@ func TestSetTaskActiveHidesAndRestoresTaskInStopwatchWorkItems(t *testing.T) {
 	}
 }
 
+func TestSetProjectActiveHidesProjectAndKeepsTaskStateAndTimeEntries(t *testing.T) {
+	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
+
+	app := New()
+	if err := app.Init("user@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	project, err := app.CreateProject("Client")
+	if err != nil {
+		t.Fatal(err)
+	}
+	task, err := app.CreateTask(project.ID, "Research")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.CreateTimeEntry(CreateTimeEntryRequest{
+		WorkItemID:  task.ID,
+		StartDate:   "2026-06-04",
+		StartTime:   "09:00",
+		EndDate:     "2026-06-04",
+		EndTime:     "10:00",
+		Description: "Historical work",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.SetTaskActive(task.ID, false); err != nil {
+		t.Fatal(err)
+	}
+
+	archived, err := app.SetProjectActive(project.ID, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if archived.Status != string(model.WorkItemStatusArchived) {
+		t.Fatalf("expected archived project, got %#v", archived)
+	}
+	stopwatchItems, err := app.ListWorkItems()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if containsTopLevelWorkItem(stopwatchItems, "Client") || containsChildWorkItem(stopwatchItems, project.ID, "Research") {
+		t.Fatalf("expected archived project to be hidden from active work items: %#v", stopwatchItems)
+	}
+	if _, err := app.CreateTask(project.ID, "Follow-up"); err == nil {
+		t.Fatal("expected task creation under archived project to fail")
+	}
+
+	restored, err := app.SetProjectActive(project.ID, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if restored.Status != string(model.WorkItemStatusActive) {
+		t.Fatalf("expected active project, got %#v", restored)
+	}
+	projectItems, err := app.ListProjectWorkItems()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !containsTopLevelWorkItem(projectItems, "Client") {
+		t.Fatalf("expected restored project to remain in project list: %#v", projectItems)
+	}
+	foundTask := false
+	for _, item := range projectItems {
+		if item.ParentID != nil && *item.ParentID == project.ID && item.Name == "Research" {
+			foundTask = true
+			if item.Status != string(model.WorkItemStatusArchived) {
+				t.Fatalf("expected previously completed task to remain archived, got %#v", item)
+			}
+		}
+	}
+	if !foundTask {
+		t.Fatalf("expected restored project to keep its task row: %#v", projectItems)
+	}
+	day, err := app.GetTimeDay("2026-06-04")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(day.Entries) != 1 || day.Entries[0].Description != "Historical work" {
+		t.Fatalf("expected time entry to remain intact, got %#v", day.Entries)
+	}
+}
+
 func TestListWorkItemsIncludesDisplayParentsAndHidesArchivedParentChildren(t *testing.T) {
 	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
 

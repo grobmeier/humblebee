@@ -17,6 +17,7 @@
 import type { ReactNode } from "react";
 
 export type SideNavigationItem = {
+  className?: string;
   href?: string;
   id: number | string;
   label: string;
@@ -44,12 +45,12 @@ export function SideNavigationList({ action, ariaLabel, emptyText, items, select
         <div className="side-navigation-list">
           {items.map((item) =>
             item.href ? (
-              <a className={`side-navigation-item ${item.id === selectedId ? "selected" : ""}`} href={item.href} key={item.id}>
+              <a className={`side-navigation-item ${item.className ?? ""} ${item.id === selectedId ? "selected" : ""}`} href={item.href} key={item.id}>
                 {item.label}
               </a>
             ) : (
               <button
-                className={`side-navigation-item ${item.id === selectedId ? "selected" : ""}`}
+                className={`side-navigation-item ${item.className ?? ""} ${item.id === selectedId ? "selected" : ""}`}
                 key={item.id}
                 type="button"
                 onClick={() => onSelect?.(item.id)}

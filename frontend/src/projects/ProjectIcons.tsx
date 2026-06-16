@@ -31,6 +31,14 @@ export function EyeIcon() {
   );
 }
 
+export function ArchiveIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
+      <path d="M4 7h16v13H4V7zM3 4h18v3H3V4zM9 12h6" />
+    </svg>
+  );
+}
+
 export function TrashIcon() {
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">

@@ -1383,6 +1383,41 @@ func (a *App) SetTaskActive(taskID int64, active bool) (*WorkItem, error) {
 	return workItemDTO(*updated), nil
 }
 
+func (a *App) SetProjectActive(projectID int64, active bool) (*WorkItem, error) {
+	if projectID == 0 {
+		return nil, errors.New("project is required")
+	}
+	database, _, err := a.openDB()
+	if err != nil {
+		return nil, err
+	}
+	defer database.Close()
+	if err := a.requireInitialized(database); err != nil {
+		return nil, err
+	}
+	personID, err := a.defaultPersonID(database)
+	if err != nil {
+		return nil, err
+	}
+	itemsRepo := repo.NewWorkItemRepo(database)
+	project, err := itemsRepo.GetByID(personID, projectID)
+	if err != nil {
+		return nil, err
+	}
+	if project == nil || project.ParentID != nil || strings.EqualFold(project.Name, "Default") {
+		return nil, errors.New("project not found")
+	}
+	status := model.WorkItemStatusArchived
+	if active {
+		status = model.WorkItemStatusActive
+	}
+	updated, err := itemsRepo.SetStatus(personID, projectID, status)
+	if err != nil {
+		return nil, err
+	}
+	return workItemDTO(*updated), nil
+}
+
 func (a *App) createWorkItem(name string, parentID *int64) (*WorkItem, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
@@ -1409,7 +1444,7 @@ func (a *App) createWorkItem(name string, parentID *int64) (*WorkItem, error) {
 		if err != nil {
 			return nil, err
 		}
-		if parent == nil || parent.ParentID != nil || strings.EqualFold(parent.Name, "Default") {
+		if parent == nil || parent.ParentID != nil || strings.EqualFold(parent.Name, "Default") || parent.Status != model.WorkItemStatusActive {
 			return nil, errors.New("project not found")
 		}
 		depth = parent.Depth + 1
