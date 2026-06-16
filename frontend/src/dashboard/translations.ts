@@ -82,8 +82,8 @@ export const translations = {
       }
     },
     projectsPage: {
-      addProject: "Projekt hinzufuegen",
-      addTask: "Aufgabe hinzufuegen",
+      addProject: "Projekt +",
+      addTask: "Aufgabe +",
       archiveProject: "Projekt archivieren",
       cancel: "Abbrechen",
       completedTask: "Aufgabe erledigt",
@@ -231,8 +231,8 @@ export const translations = {
       }
     },
     projectsPage: {
-      addProject: "Add Project",
-      addTask: "Add Task",
+      addProject: "Project +",
+      addTask: "Task +",
       archiveProject: "Archive Project",
       cancel: "Cancel",
       completedTask: "Task completed",
