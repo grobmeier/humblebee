@@ -46,7 +46,7 @@ jobs:
           echo "asset_name=HumbleBee_GUI_${safe_tag}_${{ matrix.asset_suffix }}${{ matrix.asset_extension }}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: ${{ steps.release.outputs.tag }}
 
