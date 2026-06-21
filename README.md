@@ -88,9 +88,14 @@ scripts/release-macos-app.sh v0.2.1
 ```
 
 The first command stores Apple notarization credentials in the local keychain.
-The `--no-upload` run verifies the local build/sign/notarization flow. The final
-run uploads the signed and notarized app to the existing GitHub release using
-the same asset name, for example `HumbleBee_GUI_v0.2.1_darwin_arm64.zip`.
+The `--no-upload` run verifies the local build/sign/notarization flow. The
+helper asks which git ref to build and defaults to `origin/main`. The final run
+uploads the signed and notarized app to the existing GitHub release using the
+same asset name, for example `HumbleBee_GUI_v0.2.1_darwin_arm64.zip`.
+
+When creating a new release with `scripts/release.sh` from macOS, the release
+script can wait for the unsigned GitHub GUI asset and then replace it with this
+local signed and notarized build.
 
 See `GUI.md` for the detailed GUI release notes.
 

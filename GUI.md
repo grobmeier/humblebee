@@ -53,11 +53,15 @@ xcrun notarytool store-credentials humblebee-notary
 scripts/release-macos-app.sh v0.2.1
 ```
 
-The script builds the Wails app from the release tag in a temporary worktree,
-signs it with a local Developer ID Application certificate, notarizes and
-staples it, then uploads the same release asset name with `gh release upload
---clobber`. Use `--no-upload` to test the local build/sign/notarization flow
-without replacing the GitHub release asset.
+The script asks which git ref to build and defaults to `origin/main`. It builds
+the Wails app in a temporary worktree, signs it with a local Developer ID
+Application certificate, notarizes and staples it, then uploads the same release
+asset name with `gh release upload --clobber`. Use `--no-upload` to test the
+local build/sign/notarization flow without replacing the GitHub release asset.
+
+When running `scripts/release.sh` on macOS, the release script offers to wait
+for the unsigned GitHub GUI asset and replace it with the local signed and
+notarized build.
 
 The CLI command `humblebee gui` launches an installed GUI app if one is available next to the CLI, on `PATH`, or via `HUMBLEBEE_GUI_PATH`.
 

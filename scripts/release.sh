@@ -23,6 +23,49 @@ latest_release_tag() {
     'refs/tags/v[0-9]*' | head -n 1
 }
 
+safe_tag_name() {
+  printf '%s' "$1" | tr '/' '-'
+}
+
+asset_suffix_for_host() {
+  case "$(uname -m)" in
+    arm64) printf 'darwin_arm64' ;;
+    x86_64) printf 'darwin_amd64' ;;
+    *) abort "unsupported macOS architecture for GUI signing: $(uname -m)" ;;
+  esac
+}
+
+wait_for_github_gui_asset() {
+  local tag="$1"
+  local safe_tag asset_suffix asset_name timeout interval start now elapsed
+
+  command -v gh >/dev/null 2>&1 || abort "missing required command for macOS signing: gh"
+
+  safe_tag="$(safe_tag_name "$tag")"
+  asset_suffix="$(asset_suffix_for_host)"
+  asset_name="HumbleBee_GUI_${safe_tag}_${asset_suffix}.zip"
+  timeout="${HUMBLEBEE_RELEASE_ASSET_WAIT_SECONDS:-3600}"
+  interval="${HUMBLEBEE_RELEASE_ASSET_WAIT_INTERVAL_SECONDS:-30}"
+  start="$(date +%s)"
+
+  printf 'Waiting for GitHub release asset before uploading signed replacement: %s\n' "$asset_name"
+  while true; do
+    if gh release view "$tag" --json assets --jq '.assets[].name' 2>/dev/null | grep -Fxq "$asset_name"; then
+      printf 'Found GitHub release asset: %s\n' "$asset_name"
+      return
+    fi
+
+    now="$(date +%s)"
+    elapsed="$((now - start))"
+    if (( elapsed >= timeout )); then
+      abort "timed out waiting for GitHub release asset ${asset_name}"
+    fi
+
+    printf 'Still waiting for %s (%ss elapsed)...\n' "$asset_name" "$elapsed"
+    sleep "$interval"
+  done
+}
+
 validate_version() {
   local version="$1"
 
@@ -89,3 +132,14 @@ git tag -a "$tag" -m "Release ${tag}"
 git push origin "$tag"
 
 printf 'Release tag %s pushed. GitHub Actions will build and publish the release assets.\n' "$tag"
+
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  read -r -p 'Wait for the macOS GUI asset and replace it with a signed/notarized build? [y/N]: ' sign_macos
+  if [[ "$sign_macos" =~ ^[Yy]$ ]]; then
+    wait_for_github_gui_asset "$tag"
+    HUMBLEBEE_RELEASE_SOURCE_REF="${HUMBLEBEE_RELEASE_SOURCE_REF:-origin/main}" \
+      scripts/release-macos-app.sh "$tag"
+  fi
+else
+  printf 'Skipping local macOS GUI signing because this host is not macOS.\n'
+fi

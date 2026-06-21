@@ -28,7 +28,7 @@ Required one-time local setup:
 Environment overrides:
   HUMBLEBEE_CODESIGN_IDENTITY   Exact Developer ID Application identity.
   HUMBLEBEE_NOTARY_PROFILE      notarytool keychain profile. Default: humblebee-notary
-  HUMBLEBEE_RELEASE_SOURCE_REF  Git ref to build. Default: <tag>
+  HUMBLEBEE_RELEASE_SOURCE_REF  Git ref to build. Default prompt value: origin/main
   WAILS_VERSION                 Wails CLI version. Default: v2.12.0
 
 Examples:
@@ -73,6 +73,19 @@ find_codesign_identity() {
     awk -F'"' '/Developer ID Application:/ { print $2; exit }'
 }
 
+prompt_source_ref() {
+  local default_ref="$1"
+  local source_ref
+
+  if [[ ! -t 0 ]]; then
+    printf '%s' "$default_ref"
+    return
+  fi
+
+  read -r -p "Git source ref to build [${default_ref}]: " source_ref
+  printf '%s' "${source_ref:-$default_ref}"
+}
+
 tag="${1:-}"
 if [[ -z "$tag" || "$tag" == "-h" || "$tag" == "--help" ]]; then
   usage
@@ -108,7 +121,10 @@ if [[ "$upload" == "1" ]]; then
 fi
 
 notary_profile="${HUMBLEBEE_NOTARY_PROFILE:-humblebee-notary}"
-source_ref="${HUMBLEBEE_RELEASE_SOURCE_REF:-$tag}"
+source_ref="${HUMBLEBEE_RELEASE_SOURCE_REF:-}"
+if [[ -z "$source_ref" ]]; then
+  source_ref="$(prompt_source_ref "origin/main")"
+fi
 wails_version="${WAILS_VERSION:-v2.12.0}"
 sign_identity="${HUMBLEBEE_CODESIGN_IDENTITY:-}"
 if [[ -z "$sign_identity" ]]; then
