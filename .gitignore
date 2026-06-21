@@ -5,6 +5,7 @@
 # Go
 bin/
 dist/
+release/
 *.exe
 *.test
 *.out

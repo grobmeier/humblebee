@@ -74,6 +74,26 @@ HumbleBee uses GitHub Actions for release builds.
 - UI-first release assets are built after the GitHub release is published and attached to the same release as standalone Wails app downloads.
 - SBOM assets are generated and attached to published releases as CycloneDX JSON, for example `HumbleBee_v0.2.1_sbom.cdx.json`.
 
+### Signed macOS GUI release
+
+The GitHub GUI workflow keeps producing the macOS app asset, but it is not
+signed or notarized there so GitHub-hosted macOS runner minutes stay limited.
+For a trusted macOS download, build and replace the macOS release asset locally
+from a Mac that has a Developer ID Application certificate installed:
+
+```bash
+xcrun notarytool store-credentials humblebee-notary
+scripts/release-macos-app.sh v0.2.1 --no-upload
+scripts/release-macos-app.sh v0.2.1
+```
+
+The first command stores Apple notarization credentials in the local keychain.
+The `--no-upload` run verifies the local build/sign/notarization flow. The final
+run uploads the signed and notarized app to the existing GitHub release using
+the same asset name, for example `HumbleBee_GUI_v0.2.1_darwin_arm64.zip`.
+
+See `GUI.md` for the detailed GUI release notes.
+
 ### Doctor (health check / safe repair)
 
 `humblebee doctor` helps diagnose common issues (DB location, initialization, schema, running timer, and timezone metadata on entries).

@@ -41,6 +41,24 @@ GUI release assets are built by `.github/workflows/release-gui.yml` after a GitH
 
 Release asset names include both the GUI marker and release tag, for example `HumbleBee_GUI_v0.2.1_darwin_arm64.zip`.
 
+### Signed macOS App
+
+The GitHub workflow still builds an unsigned macOS GUI asset. To replace it with
+a signed and notarized app without spending GitHub-hosted macOS runner minutes,
+run the local macOS release helper from a Mac with the Apple Developer tools
+configured:
+
+```bash
+xcrun notarytool store-credentials humblebee-notary
+scripts/release-macos-app.sh v0.2.1
+```
+
+The script builds the Wails app from the release tag in a temporary worktree,
+signs it with a local Developer ID Application certificate, notarizes and
+staples it, then uploads the same release asset name with `gh release upload
+--clobber`. Use `--no-upload` to test the local build/sign/notarization flow
+without replacing the GitHub release asset.
+
 The CLI command `humblebee gui` launches an installed GUI app if one is available next to the CLI, on `PATH`, or via `HUMBLEBEE_GUI_PATH`.
 
 ## Notes
