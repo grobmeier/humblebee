@@ -1,4 +1,4 @@
-# HumbleBee (MVP)
+# HumbleBee
 
 Local-first CLI time tracking that stays out of your way.
 
