@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-import { useEffect, useRef, useState, type FormEventHandler } from "react";
+import { useEffect, useRef, useState, type FormEventHandler, type KeyboardEvent } from "react";
 import { FormRow, Modal } from "../components/Modal";
 import { flatpickrDateFormat, formatDisplayDate, parseDisplayDate, type DateLanguage } from "./dateFormat";
 import type { TimeEntryFormState } from "./timeEntryTypes";
 import { labelWorkItemName } from "./workItemUtils";
+import { decodeWindowsAltCode, numpadDigitFromKeyboardEvent } from "./windowsAltCodeInput";
 
 type WorkItem = { id: number; name: string; parentId?: number | null; depth: number; status?: string };
 
@@ -60,6 +61,47 @@ declare global {
 export function TimeEntryModal({ error, form, isSaving, language, t, onChange, onClose, onSubmit, workItems }: TimeEntryModalProps) {
   const projects = workItems.filter((workItem) => workItem.parentId == null);
   const tasks = workItems.filter((workItem) => workItem.parentId === form.projectId);
+  const noteRef = useRef<HTMLTextAreaElement | null>(null);
+  const pendingWindowsAltCodeRef = useRef("");
+
+  function insertNoteCharacter(character: string, textarea: HTMLTextAreaElement) {
+    const selectionStart = textarea.selectionStart ?? textarea.value.length;
+    const selectionEnd = textarea.selectionEnd ?? selectionStart;
+    const nextDescription = textarea.value.slice(0, selectionStart) + character + textarea.value.slice(selectionEnd);
+    const nextCursor = selectionStart + character.length;
+    onChange({ ...form, description: nextDescription });
+    window.requestAnimationFrame(() => {
+      noteRef.current?.setSelectionRange(nextCursor, nextCursor);
+    });
+  }
+
+  function handleNoteKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (!event.altKey) {
+      return;
+    }
+    const digit = numpadDigitFromKeyboardEvent(event);
+    if (!digit) {
+      return;
+    }
+    pendingWindowsAltCodeRef.current += digit;
+    event.preventDefault();
+  }
+
+  function handleNoteKeyUp(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.key !== "Alt" && event.code !== "AltLeft" && event.code !== "AltRight") {
+      return;
+    }
+    const digits = pendingWindowsAltCodeRef.current;
+    pendingWindowsAltCodeRef.current = "";
+    if (!digits) {
+      return;
+    }
+    event.preventDefault();
+    const character = decodeWindowsAltCode(digits);
+    if (character) {
+      insertNoteCharacter(character, event.currentTarget);
+    }
+  }
 
   return (
     <Modal
@@ -159,9 +201,15 @@ export function TimeEntryModal({ error, form, isSaving, language, t, onChange, o
       <FormRow label={t.note}>
         <textarea
           className="tab-form-control"
+          ref={noteRef}
           rows={4}
           value={form.description}
+          onBlur={() => {
+            pendingWindowsAltCodeRef.current = "";
+          }}
           onChange={(event) => onChange({ ...form, description: event.target.value })}
+          onKeyDown={handleNoteKeyDown}
+          onKeyUp={handleNoteKeyUp}
         />
       </FormRow>
     </Modal>
