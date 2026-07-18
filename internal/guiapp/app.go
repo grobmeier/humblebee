@@ -1368,10 +1368,13 @@ func (a *App) UpdateTask(taskID int64, name string) (*WorkItem, error) {
 	}
 	itemsRepo := repo.NewWorkItemRepo(database)
 	task, err := itemsRepo.GetByID(personID, taskID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, errors.New("task not found")
+	}
 	if err != nil {
 		return nil, err
 	}
-	if task == nil || task.ParentID == nil {
+	if task.ParentID == nil {
 		return nil, errors.New("task not found")
 	}
 	updated, err := itemsRepo.UpdateName(personID, taskID, name)
@@ -1399,10 +1402,13 @@ func (a *App) DeleteTask(taskID int64) error {
 	}
 	itemsRepo := repo.NewWorkItemRepo(database)
 	task, err := itemsRepo.GetByID(personID, taskID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return errors.New("task not found")
+	}
 	if err != nil {
 		return err
 	}
-	if task == nil || task.ParentID == nil {
+	if task.ParentID == nil {
 		return errors.New("task not found")
 	}
 	return itemsRepo.DeleteTaskAndTimeEntries(personID, taskID)
