@@ -10,7 +10,7 @@ This is the standalone GUI application. It uses the same local SQLite database f
 
 Install Wails:
 ```bash
-go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+go install github.com/wailsapp/wails/v2/cmd/wails@v2.13.0
 ```
 
 ## Run (development)
