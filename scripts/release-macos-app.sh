@@ -29,7 +29,7 @@ Environment overrides:
   HUMBLEBEE_CODESIGN_IDENTITY   Exact Developer ID Application identity.
   HUMBLEBEE_NOTARY_PROFILE      notarytool keychain profile. Default: humblebee-notary
   HUMBLEBEE_RELEASE_SOURCE_REF  Git ref to build. Default prompt value: origin/main
-  WAILS_VERSION                 Wails CLI version. Default: v2.12.0
+  WAILS_VERSION                 Wails CLI version. Default: v2.13.0
 
 Examples:
   scripts/release-macos-app.sh v0.2.1
@@ -125,7 +125,7 @@ source_ref="${HUMBLEBEE_RELEASE_SOURCE_REF:-}"
 if [[ -z "$source_ref" ]]; then
   source_ref="$(prompt_source_ref "origin/main")"
 fi
-wails_version="${WAILS_VERSION:-v2.12.0}"
+wails_version="${WAILS_VERSION:-v2.13.0}"
 sign_identity="${HUMBLEBEE_CODESIGN_IDENTITY:-}"
 if [[ -z "$sign_identity" ]]; then
   sign_identity="$(find_codesign_identity)"

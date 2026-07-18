@@ -47,13 +47,13 @@ npm --prefix frontend run build
 Run the GUI during development:
 
 ```bash
-go run github.com/wailsapp/wails/v2/cmd/wails@v2.12.0 dev
+go run github.com/wailsapp/wails/v2/cmd/wails@v2.13.0 dev
 ```
 
 Build the production GUI with embedded frontend assets:
 
 ```bash
-go run github.com/wailsapp/wails/v2/cmd/wails@v2.12.0 build -clean -tags production
+go run github.com/wailsapp/wails/v2/cmd/wails@v2.13.0 build -clean -tags production
 ```
 
 ## Local Data
