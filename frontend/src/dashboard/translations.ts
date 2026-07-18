@@ -90,20 +90,26 @@ export const translations = {
       copyTasksFrom: "Aufgaben kopieren von",
       createProject: "Projekt anlegen",
       createTask: "Aufgabe anlegen",
-      deleteProject: "Projekt loeschen",
-      deleteProjectConfirm: "Projekt loeschen",
-      deleteProjectTitle: "Projekt loeschen",
-      deleteProjectWarning: "Das Projekt \"{name}\" wird geloescht. Alle Aufgaben und gebuchten Zeiten fuer dieses Projekt werden ebenfalls geloescht.",
+      deleteProject: "Projekt löschen",
+      deleteProjectConfirm: "Projekt löschen",
+      deleteProjectTitle: "Projekt löschen",
+      deleteProjectWarning: "Das Projekt \"{name}\" wird gelöscht. Alle Aufgaben und gebuchten Zeiten für dieses Projekt werden ebenfalls gelöscht.",
+      deleteTask: "Aufgabe löschen",
+      deleteTaskConfirm: "Aufgabe löschen",
+      deleteTaskTitle: "Aufgabe löschen",
+      deleteTaskWarning: "Die Aufgabe \"{name}\" wird gelöscht. Alle gebuchten Zeiten für diese Aufgabe werden ebenfalls gelöscht.",
       editProject: "Projekt bearbeiten",
+      editTask: "Aufgabe bearbeiten",
       emptyProjects: "Noch keine Projekte vorhanden.",
-      emptyTasks: "Noch keine Aufgaben fuer dieses Projekt.",
+      emptyTasks: "Noch keine Aufgaben für dieses Projekt.",
       name: "Name",
       nameRequired: "Bitte gib einen Namen ein.",
       noTaskTemplate: "Keine Aufgaben kopieren",
       projectList: "Projekte",
       reactivateProject: "Projekt wieder aktivieren",
       saveProject: "Projekt speichern",
-      selectProject: "Waehle links ein Projekt aus.",
+      saveTask: "Aufgabe speichern",
+      selectProject: "Wähle links ein Projekt aus.",
       showArchivedProjects: "Archivierte Projekte anzeigen",
       showHiddenTasks: "Ausgeblendete Aufgaben anzeigen",
       tasks: "Aufgaben"
@@ -243,7 +249,12 @@ export const translations = {
       deleteProjectConfirm: "Delete Project",
       deleteProjectTitle: "Delete Project",
       deleteProjectWarning: "The project \"{name}\" will be deleted. All tasks and booked time for this project will be deleted as well.",
+      deleteTask: "Delete Task",
+      deleteTaskConfirm: "Delete Task",
+      deleteTaskTitle: "Delete Task",
+      deleteTaskWarning: "The task \"{name}\" will be deleted. All booked time for this task will be deleted as well.",
       editProject: "Edit Project",
+      editTask: "Edit Task",
       emptyProjects: "No projects yet.",
       emptyTasks: "No tasks for this project yet.",
       name: "Name",
@@ -252,6 +263,7 @@ export const translations = {
       projectList: "Projects",
       reactivateProject: "Reactivate Project",
       saveProject: "Save Project",
+      saveTask: "Save Task",
       selectProject: "Select a project on the left.",
       showArchivedProjects: "Show archived projects",
       showHiddenTasks: "Show hidden tasks",
@@ -392,7 +404,12 @@ export const translations = {
     deleteProjectConfirm: string;
     deleteProjectTitle: string;
     deleteProjectWarning: string;
+    deleteTask: string;
+    deleteTaskConfirm: string;
+    deleteTaskTitle: string;
+    deleteTaskWarning: string;
     editProject: string;
+    editTask: string;
     emptyProjects: string;
     emptyTasks: string;
     name: string;
@@ -401,6 +418,7 @@ export const translations = {
     projectList: string;
     reactivateProject: string;
     saveProject: string;
+    saveTask: string;
     selectProject: string;
     showArchivedProjects: string;
     showHiddenTasks: string;

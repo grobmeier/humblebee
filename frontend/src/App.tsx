@@ -23,6 +23,7 @@ import {
   CreateProjectWithTasks,
   CreateTask,
   DeleteProject,
+  DeleteTask,
   DeleteTimeEntry,
   DiscardStopwatch,
   GetDashboard,
@@ -43,6 +44,7 @@ import {
   Stop,
   SwitchDatabase,
   UpdateProject,
+  UpdateTask,
   UpdateTimeEntry,
   UseDefaultDatabase
 } from "../wailsjs/go/guiapp/App";
@@ -381,6 +383,13 @@ export default function App() {
     await refreshProjectWorkItems();
   }
 
+  async function onUpdateTask(taskId: number, name: string) {
+    await UpdateTask(taskId, name);
+    await refreshWorkItems();
+    await refreshProjectWorkItems();
+    await refreshStopwatches();
+  }
+
   async function onDeleteProject(projectId: number) {
     setError("");
     await DeleteProject(projectId);
@@ -396,6 +405,18 @@ export default function App() {
     await refreshStopwatches();
     const nextProject = items.find((item) => item.parentId == null && item.name.toLowerCase() !== "default");
     setSelectedProjectPageProjectId(nextProject?.id ?? 0);
+  }
+
+  async function onDeleteTask(taskId: number) {
+    setError("");
+    await DeleteTask(taskId);
+    if (selectedWorkItemId === taskId) {
+      setSelectedWorkItemId(0);
+    }
+    await refreshWorkItems();
+    await refreshProjectWorkItems();
+    await refreshDashboardTime(selectedDate);
+    await refreshStopwatches();
   }
 
   async function onSetProjectActive(projectId: number, active: boolean) {
@@ -842,10 +863,12 @@ export default function App() {
             onCreateProject={onCreateProject}
             onCreateTask={onCreateTask}
             onDeleteProject={onDeleteProject}
+            onDeleteTask={onDeleteTask}
             onSelectProject={setSelectedProjectPageProjectId}
             onSetProjectActive={onSetProjectActive}
             onSetTaskActive={onSetTaskActive}
             onUpdateProject={onUpdateProject}
+            onUpdateTask={onUpdateTask}
           />
         ) : null}
         {activePage === "reports" ? <ReportsPage activeReport={activeReport} language={language} workItems={projectWorkItems} /> : null}

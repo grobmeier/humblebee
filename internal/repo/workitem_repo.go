@@ -224,7 +224,7 @@ func (r *WorkItemRepo) UpdateName(personID, workItemID int64, name string) (*mod
 	res, err := r.db.Exec(`
 		UPDATE workitems
 		SET name = ?, updated_at = strftime('%s','now')
-		WHERE person_id = ? AND id = ? AND status = 'ACTIVE'
+		WHERE person_id = ? AND id = ? AND status <> 'DELETED'
 	`, name, personID, workItemID)
 	if err != nil {
 		return nil, err
@@ -313,6 +313,93 @@ func (r *WorkItemRepo) DeleteProjectAndTimeEntries(personID, projectID int64) er
 	}
 	if strings.EqualFold(name, "Default") {
 		return errors.New("cannot remove the 'Default' work item")
+	}
+	if !path.Valid || path.String == "" {
+		return errors.New("work item missing path")
+	}
+
+	p := path.String
+	like := p + "/%"
+	if _, err := tx.Exec(`
+		DELETE FROM closed_stopwatch_workitems
+		WHERE person_id = ?
+		  AND workitem_id IN (
+			SELECT id FROM workitems
+			WHERE person_id = ? AND (path = ? OR path LIKE ?)
+		  )
+	`, personID, personID, p, like); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`
+		DELETE FROM external_mappings
+		WHERE local_table = 'time_entries'
+		  AND local_id IN (
+			SELECT id FROM time_entries
+			WHERE person_id = ?
+			  AND workitem_id IN (
+				SELECT id FROM workitems
+				WHERE person_id = ? AND (path = ? OR path LIKE ?)
+			  )
+		  )
+	`, personID, personID, p, like); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`
+		DELETE FROM time_entries
+		WHERE person_id = ?
+		  AND workitem_id IN (
+			SELECT id FROM workitems
+			WHERE person_id = ? AND (path = ? OR path LIKE ?)
+		  )
+	`, personID, personID, p, like); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`
+		DELETE FROM external_mappings
+		WHERE local_table = 'workitems'
+		  AND local_id IN (
+			SELECT id FROM workitems
+			WHERE person_id = ? AND (path = ? OR path LIKE ?)
+		  )
+	`, personID, p, like); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`
+		DELETE FROM workitems
+		WHERE person_id = ? AND (path = ? OR path LIKE ?)
+	`, personID, p, like); err != nil {
+		return err
+	}
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	committed = true
+	return nil
+}
+
+func (r *WorkItemRepo) DeleteTaskAndTimeEntries(personID, taskID int64) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			_ = tx.Rollback()
+		}
+	}()
+
+	var path sql.NullString
+	var parentID sql.NullInt64
+	if err := tx.QueryRow(`
+		SELECT path, parent_id
+		FROM workitems
+		WHERE person_id = ? AND id = ? AND status <> 'DELETED'
+	`, personID, taskID).Scan(&path, &parentID); err != nil {
+		return err
+	}
+	if !parentID.Valid {
+		return errors.New("work item is not a task")
 	}
 	if !path.Valid || path.String == "" {
 		return errors.New("work item missing path")

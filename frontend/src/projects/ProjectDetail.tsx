@@ -31,7 +31,9 @@ type ProjectDetailProps = {
   onAddTask: (project: WorkItem) => void;
   onArchiveProject: (project: WorkItem) => void;
   onDeleteProject: (project: WorkItem) => void;
+  onDeleteTask: (task: WorkItem) => void;
   onEditProject: (project: WorkItem) => void;
+  onEditTask: (task: WorkItem) => void;
   onReactivateProject: (project: WorkItem) => void;
   onToggleHiddenTasks: () => void;
   onToggleTaskCompleted: (task: WorkItem, completed: boolean) => void;
@@ -48,7 +50,9 @@ export function ProjectDetail({
   onAddTask,
   onArchiveProject,
   onDeleteProject,
+  onDeleteTask,
   onEditProject,
+  onEditTask,
   onReactivateProject,
   onToggleHiddenTasks,
   onToggleTaskCompleted
@@ -83,7 +87,14 @@ export function ProjectDetail({
 
       {error ? <div className="errors alert alert-error">{error}</div> : null}
 
-      <ProjectTaskList language={language} tasks={tasks} t={t} onToggleCompleted={onToggleTaskCompleted} />
+      <ProjectTaskList
+        language={language}
+        tasks={tasks}
+        t={t}
+        onDelete={onDeleteTask}
+        onEdit={onEditTask}
+        onToggleCompleted={onToggleTaskCompleted}
+      />
     </section>
   );
 }

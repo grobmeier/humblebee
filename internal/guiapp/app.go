@@ -1348,6 +1348,66 @@ func (a *App) CreateTask(projectID int64, name string) (*WorkItem, error) {
 	return a.createWorkItem(name, &projectID)
 }
 
+func (a *App) UpdateTask(taskID int64, name string) (*WorkItem, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil, errors.New("task name is required")
+	}
+
+	database, _, err := a.openDB()
+	if err != nil {
+		return nil, err
+	}
+	defer database.Close()
+	if err := a.requireInitialized(database); err != nil {
+		return nil, err
+	}
+	personID, err := a.defaultPersonID(database)
+	if err != nil {
+		return nil, err
+	}
+	itemsRepo := repo.NewWorkItemRepo(database)
+	task, err := itemsRepo.GetByID(personID, taskID)
+	if err != nil {
+		return nil, err
+	}
+	if task == nil || task.ParentID == nil {
+		return nil, errors.New("task not found")
+	}
+	updated, err := itemsRepo.UpdateName(personID, taskID, name)
+	if err != nil {
+		return nil, err
+	}
+	return workItemDTO(*updated), nil
+}
+
+func (a *App) DeleteTask(taskID int64) error {
+	if taskID == 0 {
+		return errors.New("task is required")
+	}
+	database, _, err := a.openDB()
+	if err != nil {
+		return err
+	}
+	defer database.Close()
+	if err := a.requireInitialized(database); err != nil {
+		return err
+	}
+	personID, err := a.defaultPersonID(database)
+	if err != nil {
+		return err
+	}
+	itemsRepo := repo.NewWorkItemRepo(database)
+	task, err := itemsRepo.GetByID(personID, taskID)
+	if err != nil {
+		return err
+	}
+	if task == nil || task.ParentID == nil {
+		return errors.New("task not found")
+	}
+	return itemsRepo.DeleteTaskAndTimeEntries(personID, taskID)
+}
+
 func (a *App) SetTaskActive(taskID int64, active bool) (*WorkItem, error) {
 	if taskID == 0 {
 		return nil, errors.New("task is required")

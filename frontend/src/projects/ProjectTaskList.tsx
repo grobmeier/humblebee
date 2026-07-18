@@ -22,10 +22,12 @@ type ProjectTaskListProps = {
   language: DateLanguage;
   tasks: WorkItem[];
   t: ProjectsPageText;
+  onDelete: (task: WorkItem) => void;
+  onEdit: (task: WorkItem) => void;
   onToggleCompleted: (task: WorkItem, completed: boolean) => void;
 };
 
-export function ProjectTaskList({ language, tasks, t, onToggleCompleted }: ProjectTaskListProps) {
+export function ProjectTaskList({ language, tasks, t, onDelete, onEdit, onToggleCompleted }: ProjectTaskListProps) {
   if (!tasks.length) {
     return <p className="projects-empty">{t.emptyTasks}</p>;
   }
@@ -33,7 +35,15 @@ export function ProjectTaskList({ language, tasks, t, onToggleCompleted }: Proje
   return (
     <div className="project-task-list">
       {tasks.map((task) => (
-        <ProjectTaskRow key={task.id} language={language} task={task} t={t} onToggleCompleted={onToggleCompleted} />
+        <ProjectTaskRow
+          key={task.id}
+          language={language}
+          task={task}
+          t={t}
+          onDelete={onDelete}
+          onEdit={onEdit}
+          onToggleCompleted={onToggleCompleted}
+        />
       ))}
     </div>
   );

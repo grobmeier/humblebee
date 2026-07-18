@@ -14,6 +14,8 @@ export function CreateTimeEntry(arg1:guiapp.CreateTimeEntryRequest):Promise<guia
 
 export function DeleteProject(arg1:number):Promise<void>;
 
+export function DeleteTask(arg1:number):Promise<void>;
+
 export function DeleteTimeEntry(arg1:number):Promise<void>;
 
 export function DiscardRunningStopwatch():Promise<void>;
@@ -75,6 +77,8 @@ export function Stop():Promise<guiapp.StopResult>;
 export function SwitchDatabase(arg1:string):Promise<guiapp.DatabaseInfo>;
 
 export function UpdateProject(arg1:number,arg2:string):Promise<guiapp.WorkItem>;
+
+export function UpdateTask(arg1:number,arg2:string):Promise<guiapp.WorkItem>;
 
 export function UpdateTimeEntry(arg1:guiapp.CreateTimeEntryRequest):Promise<guiapp.TimeEntry>;
 
