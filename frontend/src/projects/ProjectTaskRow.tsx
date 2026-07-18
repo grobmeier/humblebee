@@ -16,16 +16,19 @@
 
 import type { DateLanguage } from "../dashboard/dateFormat";
 import { labelWorkItemName } from "../dashboard/workItemUtils";
+import { EditIcon, TrashIcon } from "./ProjectIcons";
 import { isActiveTask, type ProjectsPageText, type WorkItem } from "./projectTypes";
 
 type ProjectTaskRowProps = {
   language: DateLanguage;
   task: WorkItem;
   t: ProjectsPageText;
+  onDelete: (task: WorkItem) => void;
+  onEdit: (task: WorkItem) => void;
   onToggleCompleted: (task: WorkItem, completed: boolean) => void;
 };
 
-export function ProjectTaskRow({ language, task, t, onToggleCompleted }: ProjectTaskRowProps) {
+export function ProjectTaskRow({ language, task, t, onDelete, onEdit, onToggleCompleted }: ProjectTaskRowProps) {
   const completed = !isActiveTask(task);
 
   return (
@@ -41,6 +44,14 @@ export function ProjectTaskRow({ language, task, t, onToggleCompleted }: Project
           <strong>{labelWorkItemName(task.name, language)}</strong>
         </span>
       </label>
+      <div className="project-task-actions">
+        <button className="icon-button" type="button" onClick={() => onEdit(task)} aria-label={t.editTask} title={t.editTask}>
+          <EditIcon />
+        </button>
+        <button className="icon-button danger-icon-button" type="button" onClick={() => onDelete(task)} aria-label={t.deleteTask} title={t.deleteTask}>
+          <TrashIcon />
+        </button>
+      </div>
     </div>
   );
 }

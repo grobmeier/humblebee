@@ -35,7 +35,12 @@ export type ProjectsPageText = {
   deleteProjectConfirm: string;
   deleteProjectTitle: string;
   deleteProjectWarning: string;
+  deleteTask: string;
+  deleteTaskConfirm: string;
+  deleteTaskTitle: string;
+  deleteTaskWarning: string;
   editProject: string;
+  editTask: string;
   emptyProjects: string;
   emptyTasks: string;
   name: string;
@@ -44,6 +49,7 @@ export type ProjectsPageText = {
   projectList: string;
   reactivateProject: string;
   saveProject: string;
+  saveTask: string;
   selectProject: string;
   showArchivedProjects: string;
   showHiddenTasks: string;
@@ -53,9 +59,10 @@ export type ProjectsPageText = {
 export type ProjectFormModalState =
   | { type: "create-project" }
   | { type: "edit-project"; project: WorkItem }
-  | { type: "create-task"; project: WorkItem };
+  | { type: "create-task"; project: WorkItem }
+  | { type: "edit-task"; task: WorkItem };
 
-export type ProjectModalState = ProjectFormModalState | { type: "delete-project"; project: WorkItem } | null;
+export type ProjectModalState = ProjectFormModalState | { type: "delete-project"; project: WorkItem } | { type: "delete-task"; task: WorkItem } | null;
 
 export function isActiveTask(item: WorkItem): boolean {
   return (item.status ?? "ACTIVE") === "ACTIVE";

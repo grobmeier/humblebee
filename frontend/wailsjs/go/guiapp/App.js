@@ -26,6 +26,10 @@ export function DeleteProject(arg1) {
   return window['go']['guiapp']['App']['DeleteProject'](arg1);
 }
 
+export function DeleteTask(arg1) {
+  return window['go']['guiapp']['App']['DeleteTask'](arg1);
+}
+
 export function DeleteTimeEntry(arg1) {
   return window['go']['guiapp']['App']['DeleteTimeEntry'](arg1);
 }
@@ -148,6 +152,10 @@ export function SwitchDatabase(arg1) {
 
 export function UpdateProject(arg1, arg2) {
   return window['go']['guiapp']['App']['UpdateProject'](arg1, arg2);
+}
+
+export function UpdateTask(arg1, arg2) {
+  return window['go']['guiapp']['App']['UpdateTask'](arg1, arg2);
 }
 
 export function UpdateTimeEntry(arg1) {

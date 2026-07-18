@@ -589,6 +589,9 @@ code {
 
 .project-task-row {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
   min-height: 48px;
   padding: 12px 14px;
   border: 1px solid #ddd;
@@ -617,6 +620,12 @@ code {
   display: block;
   font-size: 15px;
   font-weight: 700;
+}
+
+.project-task-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .project-delete-warning {

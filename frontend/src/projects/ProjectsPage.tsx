@@ -19,6 +19,7 @@ import { ProjectDeleteModal } from "./ProjectDeleteModal";
 import { ProjectDetail } from "./ProjectDetail";
 import { ProjectNameModal } from "./ProjectNameModal";
 import { ProjectsList } from "./ProjectsList";
+import { TaskDeleteModal } from "./TaskDeleteModal";
 import type { DateLanguage } from "../dashboard/dateFormat";
 import { isActiveTask, isArchivedWorkItem, type ProjectModalState, type ProjectsPageText, type WorkItem } from "./projectTypes";
 
@@ -30,10 +31,12 @@ type ProjectsPageProps = {
   onCreateProject: (name: string, sourceProjectId: number) => Promise<void>;
   onCreateTask: (projectId: number, name: string) => Promise<void>;
   onDeleteProject: (projectId: number) => Promise<void>;
+  onDeleteTask: (taskId: number) => Promise<void>;
   onSelectProject: (projectId: number) => void;
   onSetProjectActive: (projectId: number, active: boolean) => Promise<void>;
   onSetTaskActive: (taskId: number, active: boolean) => Promise<void>;
   onUpdateProject: (projectId: number, name: string) => Promise<void>;
+  onUpdateTask: (taskId: number, name: string) => Promise<void>;
 };
 
 export function ProjectsPage({
@@ -44,10 +47,12 @@ export function ProjectsPage({
   onCreateProject,
   onCreateTask,
   onDeleteProject,
+  onDeleteTask,
   onSelectProject,
   onSetProjectActive,
   onSetTaskActive,
-  onUpdateProject
+  onUpdateProject,
+  onUpdateTask
 }: ProjectsPageProps) {
   const allProjects = useMemo(
     () => workItems.filter((item) => item.parentId == null && item.name.toLowerCase() !== "default"),
@@ -111,8 +116,22 @@ export function ProjectsPage({
     setError(null);
   }
 
+  function openEditTaskModal(task: WorkItem) {
+    setModal({ type: "edit-task", task });
+    setName(task.name);
+    setCopySourceProjectId(0);
+    setError(null);
+  }
+
   function openDeleteProjectModal(project: WorkItem) {
     setModal({ type: "delete-project", project });
+    setName("");
+    setCopySourceProjectId(0);
+    setError(null);
+  }
+
+  function openDeleteTaskModal(task: WorkItem) {
+    setModal({ type: "delete-task", task });
     setName("");
     setCopySourceProjectId(0);
     setError(null);
@@ -135,6 +154,10 @@ export function ProjectsPage({
       await submitDeleteProject(modal.project);
       return;
     }
+    if (modal.type === "delete-task") {
+      await submitDeleteTask(modal.task);
+      return;
+    }
 
     await submitNameModal(modal);
   }
@@ -152,7 +175,22 @@ export function ProjectsPage({
     }
   }
 
-  async function submitNameModal(modal: Exclude<ProjectModalState, { type: "delete-project"; project: WorkItem } | null>) {
+  async function submitDeleteTask(task: WorkItem) {
+    setIsSaving(true);
+    setError(null);
+    try {
+      await onDeleteTask(task.id);
+      closeModal();
+    } catch (err) {
+      setError(String(err));
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function submitNameModal(
+    modal: Exclude<ProjectModalState, { type: "delete-project"; project: WorkItem } | { type: "delete-task"; task: WorkItem } | null>
+  ) {
     const trimmedName = name.trim();
     if (!trimmedName) {
       setError(t.nameRequired);
@@ -166,6 +204,8 @@ export function ProjectsPage({
         await onCreateProject(trimmedName, copySourceProjectId);
       } else if (modal.type === "edit-project") {
         await onUpdateProject(modal.project.id, trimmedName);
+      } else if (modal.type === "edit-task") {
+        await onUpdateTask(modal.task.id, trimmedName);
       } else {
         await onCreateTask(modal.project.id, trimmedName);
       }
@@ -222,7 +262,9 @@ export function ProjectsPage({
         onAddTask={openCreateTaskModal}
         onArchiveProject={(project) => void setProjectActive(project, false)}
         onDeleteProject={openDeleteProjectModal}
+        onDeleteTask={openDeleteTaskModal}
         onEditProject={openEditProjectModal}
+        onEditTask={openEditTaskModal}
         onReactivateProject={(project) => void setProjectActive(project, true)}
         onToggleHiddenTasks={() => setShowHiddenTasks((value) => !value)}
         onToggleTaskCompleted={toggleTaskCompleted}
@@ -238,6 +280,18 @@ export function ProjectsPage({
           error={error}
           isSaving={isSaving}
           project={activeModal.project}
+          t={t}
+          onClose={closeModal}
+          onSubmit={submitModal}
+        />
+      );
+    }
+    if (activeModal.type === "delete-task") {
+      return (
+        <TaskDeleteModal
+          error={error}
+          isSaving={isSaving}
+          task={activeModal.task}
           t={t}
           onClose={closeModal}
           onSubmit={submitModal}

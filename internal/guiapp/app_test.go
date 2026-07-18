@@ -261,6 +261,119 @@ func TestCreateProjectUpdateProjectAndCreateTask(t *testing.T) {
 	}
 }
 
+func TestUpdateTaskRenamesTaskAndKeepsTimeEntries(t *testing.T) {
+	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
+
+	app := New()
+	if err := app.Init("user@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	project, err := app.CreateProject("Client")
+	if err != nil {
+		t.Fatal(err)
+	}
+	task, err := app.CreateTask(project.ID, "Research")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.CreateTimeEntry(CreateTimeEntryRequest{
+		WorkItemID:  task.ID,
+		StartDate:   "2026-05-12",
+		StartTime:   "09:00",
+		EndDate:     "2026-05-12",
+		EndTime:     "10:00",
+		Description: "Task time",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	updated, err := app.UpdateTask(task.ID, "Consulting")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Name != "Consulting" {
+		t.Fatalf("expected renamed task, got %#v", updated)
+	}
+	if _, err := app.UpdateTask(project.ID, "Wrong kind"); err == nil {
+		t.Fatal("expected project ID to be rejected as task")
+	}
+
+	day, err := app.GetTimeDay("2026-05-12")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(day.Entries) != 1 || day.Entries[0].WorkItemID == nil || *day.Entries[0].WorkItemID != task.ID {
+		t.Fatalf("expected task time entry to stay attached after rename: %#v", day.Entries)
+	}
+}
+
+func TestDeleteTaskDeletesOnlyTaskAndItsTimeEntries(t *testing.T) {
+	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
+
+	app := New()
+	if err := app.Init("user@example.com"); err != nil {
+		t.Fatal(err)
+	}
+	project, err := app.CreateProject("Client")
+	if err != nil {
+		t.Fatal(err)
+	}
+	research, err := app.CreateTask(project.ID, "Research")
+	if err != nil {
+		t.Fatal(err)
+	}
+	accounting, err := app.CreateTask(project.ID, "Accounting")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.CreateTimeEntry(CreateTimeEntryRequest{
+		WorkItemID:  research.ID,
+		StartDate:   "2026-05-12",
+		StartTime:   "09:00",
+		EndDate:     "2026-05-12",
+		EndTime:     "10:00",
+		Description: "Research time",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := app.CreateTimeEntry(CreateTimeEntryRequest{
+		WorkItemID:  accounting.ID,
+		StartDate:   "2026-05-12",
+		StartTime:   "10:00",
+		EndDate:     "2026-05-12",
+		EndTime:     "11:00",
+		Description: "Accounting time",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := app.DeleteTask(research.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := app.DeleteTask(project.ID); err == nil {
+		t.Fatal("expected project ID to be rejected as task")
+	}
+
+	projectItems, err := app.ListProjectWorkItems()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !containsGUIWorkItem(projectItems, project.ID, "Client") || !containsGUIWorkItem(projectItems, accounting.ID, "Accounting") {
+		t.Fatalf("expected project and sibling task to stay visible: %#v", projectItems)
+	}
+	if containsGUIWorkItem(projectItems, research.ID, "Research") {
+		t.Fatalf("expected deleted task to be absent from project management: %#v", projectItems)
+	}
+
+	day, err := app.GetTimeDay("2026-05-12")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(day.Entries) != 1 || day.Entries[0].WorkItemID == nil || *day.Entries[0].WorkItemID != accounting.ID {
+		t.Fatalf("expected only sibling task time entry to remain, got %#v", day.Entries)
+	}
+}
+
 func TestCreateProjectWithTasksCopiesOnlyActiveTasks(t *testing.T) {
 	t.Setenv("HUMBLEBEE_HOME", t.TempDir())
 

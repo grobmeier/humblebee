@@ -87,6 +87,9 @@ function modalTitle(modal: ProjectFormModalState, t: ProjectsPageText): string {
   if (modal.type === "edit-project") {
     return t.editProject;
   }
+  if (modal.type === "edit-task") {
+    return t.editTask;
+  }
   return t.createTask;
 }
 
@@ -96,6 +99,9 @@ function modalSubmitLabel(modal: ProjectFormModalState, t: ProjectsPageText): st
   }
   if (modal.type === "edit-project") {
     return t.saveProject;
+  }
+  if (modal.type === "edit-task") {
+    return t.saveTask;
   }
   return t.createTask;
 }
