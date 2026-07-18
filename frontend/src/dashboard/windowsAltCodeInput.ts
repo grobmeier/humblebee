@@ -83,13 +83,10 @@ export function decodeWindowsAltCode(digits: string): string | null {
   return String.fromCodePoint(codePoint);
 }
 
-export function numpadDigitFromKeyboardEvent(event: Pick<KeyboardEvent, "code" | "key">): string | null {
+export function numpadDigitFromKeyboardEvent(event: Pick<KeyboardEvent, "code">): string | null {
   const codeMatch = /^Numpad([0-9])$/.exec(event.code);
   if (codeMatch) {
     return codeMatch[1];
-  }
-  if (/^[0-9]$/.test(event.key)) {
-    return event.key;
   }
   return null;
 }

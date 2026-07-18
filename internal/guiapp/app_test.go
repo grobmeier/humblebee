@@ -297,6 +297,9 @@ func TestUpdateTaskRenamesTaskAndKeepsTimeEntries(t *testing.T) {
 	if _, err := app.UpdateTask(project.ID, "Wrong kind"); err == nil {
 		t.Fatal("expected project ID to be rejected as task")
 	}
+	if _, err := app.UpdateTask(999999, "Missing"); err == nil || err.Error() != "task not found" {
+		t.Fatalf("expected missing task error, got %v", err)
+	}
 
 	day, err := app.GetTimeDay("2026-05-12")
 	if err != nil {
@@ -352,6 +355,9 @@ func TestDeleteTaskDeletesOnlyTaskAndItsTimeEntries(t *testing.T) {
 	}
 	if err := app.DeleteTask(project.ID); err == nil {
 		t.Fatal("expected project ID to be rejected as task")
+	}
+	if err := app.DeleteTask(999999); err == nil || err.Error() != "task not found" {
+		t.Fatalf("expected missing task error, got %v", err)
 	}
 
 	projectItems, err := app.ListProjectWorkItems()
