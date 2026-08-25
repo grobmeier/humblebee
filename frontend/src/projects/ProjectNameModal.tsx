@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-import type { FormEvent } from "react";
+import { useRef, type FormEvent } from "react";
 import { FormRow, Modal } from "../components/Modal";
 import type { DateLanguage } from "../dashboard/dateFormat";
+import { useWindowsAltCodeInput } from "../dashboard/useWindowsAltCodeInput";
 import { labelWorkItemName } from "../dashboard/workItemUtils";
 import type { ProjectFormModalState, ProjectsPageText, WorkItem } from "./projectTypes";
 
@@ -49,6 +50,13 @@ export function ProjectNameModal({
   onCopySourceChange,
   onSubmit
 }: ProjectNameModalProps) {
+  const nameRef = useRef<HTMLInputElement | null>(null);
+  const nameAltCodeInput = useWindowsAltCodeInput({
+    inputRef: nameRef,
+    value: name,
+    onChange
+  });
+
   return (
     <Modal
       title={modalTitle(modal, t)}
@@ -62,7 +70,16 @@ export function ProjectNameModal({
     >
       {error ? <div className="errors alert alert-error">{error}</div> : null}
       <FormRow label={t.name}>
-        <input className="tab-form-control" autoFocus value={name} onChange={(event) => onChange(event.target.value)} />
+        <input
+          className="tab-form-control"
+          ref={nameRef}
+          autoFocus
+          value={name}
+          onBlur={nameAltCodeInput.onBlur}
+          onChange={(event) => onChange(event.target.value)}
+          onKeyDown={nameAltCodeInput.onKeyDown}
+          onKeyUp={nameAltCodeInput.onKeyUp}
+        />
       </FormRow>
       {modal.type === "create-project" ? (
         <FormRow label={t.copyTasksFrom}>
