@@ -29,7 +29,7 @@ const englishDayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const germanMonthNames = [
   "Januar",
   "Februar",
-  "Maerz",
+  "März",
   "April",
   "Mai",
   "Juni",

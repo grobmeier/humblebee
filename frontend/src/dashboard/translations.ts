@@ -22,8 +22,8 @@ export const translations = {
       addTime: "Zeit erfassen",
       currentWeek: "Aktuelle Woche",
       navigation: "Kalendernavigation",
-      nextDay: "Naechster Tag",
-      nextWeek: "Naechste Woche",
+      nextDay: "Nächster Tag",
+      nextWeek: "Nächste Woche",
       previousDay: "Vorheriger Tag",
       previousWeek: "Vorherige Woche",
       today: "Heute"
@@ -38,8 +38,8 @@ export const translations = {
       createNewHint: "Lege eine neue lokale HumbleBee-Datenbankdatei an.",
       current: "Aktuelle Datenbank",
       defaultPath: "Standarddatenbank",
-      openExisting: "Andere Datenbank oeffnen",
-      openExistingHint: "Waehle eine vorhandene HumbleBee-Datenbankdatei.",
+      openExisting: "Andere Datenbank öffnen",
+      openExistingHint: "Wähle eine vorhandene HumbleBee-Datenbankdatei.",
       switchButton: "Datenbank wechseln",
       switchWarning: "",
       title: "Datenbank wechseln",
@@ -47,12 +47,12 @@ export const translations = {
     },
     importPage: {
       alreadyImported: "Dieser Time & Bill-Export wurde bereits importiert.",
-      chooseFile: "Datei waehlen",
+      chooseFile: "Datei wählen",
       completed: "Import abgeschlossen.",
       conflictDetails: "{count} Konflikt(e) anzeigen",
       conflicts: "Konflikte",
       created: "Angelegt",
-      existingTimeWarning: "Diese Datenbank enthaelt bereits {count} gebuchte Zeiteintraege. HumbleBee ueberschreibt keine vorhandenen Zeiten; ueberschneidende importierte Zeiten werden uebersprungen.",
+      existingTimeWarning: "Diese Datenbank enthält bereits {count} gebuchte Zeiteinträge. HumbleBee überschreibt keine vorhandenen Zeiten; überschneidende importierte Zeiten werden übersprungen.",
       exportedAt: "Exportiert am",
       exportUuid: "Export UUID",
       file: "Exportdatei",
@@ -60,11 +60,11 @@ export const translations = {
       importing: "Importiert...",
       importButton: "Time & Bill importieren",
       mapped: "Bestehend",
-      noFileSelected: "Keine Datei ausgewaehlt",
+      noFileSelected: "Keine Datei ausgewählt",
       preview: "Vorschau",
-      previewing: "Prueft...",
+      previewing: "Prüft...",
       projects: "Projekte",
-      skipped: "Uebersprungen",
+      skipped: "Übersprungen",
       sourceUser: "Benutzer",
       tasks: "Aufgaben",
       timeEntries: "Zeiten",
@@ -72,13 +72,13 @@ export const translations = {
       wouldConflict: "Konflikt",
       wouldCreate: "Anlegen",
       wouldMap: "Bestehend",
-      wouldSkip: "Ueberspringen"
+      wouldSkip: "Überspringen"
     },
     placeholders: {
       reports: {
         eyebrow: "Noch nicht fertig",
         title: "Berichte",
-        body: "Zeitauswertungen und Exporte werden hier spaeter verfuegbar sein."
+        body: "Zeitauswertungen und Exporte werden hier später verfügbar sein."
       }
     },
     projectsPage: {
@@ -127,18 +127,18 @@ export const translations = {
         total: "Gesamt"
       },
       dateRange: "Datumsbereich",
-      emptyReport: "Keine Berichtsdaten fuer diesen Zeitraum.",
+      emptyReport: "Keine Berichtsdaten für diesen Zeitraum.",
       exportExcel: "Excel exportieren",
       filterMode: "Berichtsfilter",
       firstReportableProject: "Erstes auswertbares Projekt",
       fromMonth: "Von Monat",
       loadingReport: "Bericht wird geladen...",
       monthly: "Monatlich",
-      months: ["Januar", "Februar", "Maerz", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"],
+      months: ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"],
       print: "Drucken",
       reportList: "Berichte",
       savedTo: "Gespeichert unter",
-      selectProject: "Projekt auswaehlen",
+      selectProject: "Projekt auswählen",
       toMonth: "Bis Monat",
       titles: {
         "worktime-by-month": "Arbeitszeit pro Monat",
@@ -152,22 +152,22 @@ export const translations = {
       book: "Buchen",
       createStopwatch: "Stoppuhr anlegen",
       discardRunning: "Stoppuhr verwerfen",
-      discardRunningConfirm: "Die Stoppuhr wird geloescht und nicht gebucht. Fortfahren?",
+      discardRunningConfirm: "Die Stoppuhr wird gelöscht und nicht gebucht. Fortfahren?",
       selectWorkItem: "Stoppuhr-Aufgabe",
       start: "Starten",
       stopStopwatch: "Stoppen"
     },
     timeEntryModal: {
-      conflictMessage: "Die Stoppuhr ueberschneidet sich mit bereits gebuchter Zeit. Passe den Zeitraum an und speichere den Eintrag.",
+      conflictMessage: "Die Stoppuhr überschneidet sich mit bereits gebuchter Zeit. Passe den Zeitraum an und speichere den Eintrag.",
       end: "Ende",
       note: "Notiz",
       project: "Projekt",
       save: "Speichern",
       saving: "Speichern...",
-      selectProjectRequired: "Bitte waehle ein Projekt aus.",
-      selectTaskRequired: "Bitte waehle eine Taetigkeit aus.",
+      selectProjectRequired: "Bitte wähle ein Projekt aus.",
+      selectTaskRequired: "Bitte wähle eine Tätigkeit aus.",
       start: "Start",
-      task: "Taetigkeit",
+      task: "Tätigkeit",
       title: "Zeiteintrag erfassen",
       untilMidnight: "Bis Mitternacht?"
     }

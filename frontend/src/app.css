@@ -1148,14 +1148,27 @@ code {
   display: grid;
   grid-template-columns: 130px minmax(0, 1fr);
   gap: 14px;
+  align-items: center;
+}
+
+.tab-form-row--start {
   align-items: start;
 }
 
 .tab-form-label {
-  padding-top: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 34px;
   color: #555;
   font-weight: 700;
+  line-height: 1.2;
   text-align: right;
+}
+
+.tab-form-row--start .tab-form-label {
+  align-items: flex-start;
+  padding-top: 7px;
 }
 
 .tab-form-controls {

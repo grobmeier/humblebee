@@ -945,7 +945,7 @@ function PlaceholderPage({ page, text }: { page: "reports"; text: { eyebrow: str
 function formatTimeEntryError(error: unknown): string {
   const message = String(error);
   if (message.includes("overlaps")) {
-    return "Der Zeiteintrag ueberschneidet sich mit einem bestehenden Eintrag.";
+    return "Der Zeiteintrag überschneidet sich mit einem bestehenden Eintrag.";
   }
   if (message.includes("end time must be after start time")) {
     return "Die Endzeit muss nach der Startzeit liegen.";

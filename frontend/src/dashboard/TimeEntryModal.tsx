@@ -163,7 +163,7 @@ export function TimeEntryModal({ error, form, isSaving, language, t, onChange, o
         </select>
       </FormRow>
 
-      <FormRow label={t.note}>
+      <FormRow label={t.note} align="start">
         <textarea
           className="tab-form-control"
           ref={noteRef}

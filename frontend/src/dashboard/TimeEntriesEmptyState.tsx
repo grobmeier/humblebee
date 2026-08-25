@@ -41,7 +41,7 @@ type TimeEntriesEmptyStateProps = {
 export function TimeEntriesEmptyState({ entries, expandedNoteIds, language, onDeleteEntry, onEditEntry, onToggleNote, workItems }: TimeEntriesEmptyStateProps) {
   return (
     <section className="entries-section">
-      <h2>Zeiteintraege</h2>
+      <h2>Zeiteinträge</h2>
       {entries.length ? (
         <div className="entries-list">
           {entries.map((entry) => {
@@ -77,8 +77,8 @@ export function TimeEntriesEmptyState({ entries, expandedNoteIds, language, onDe
                       event.stopPropagation();
                       onDeleteEntry(entry);
                     }}
-                    aria-label="Zeiteintrag loeschen"
-                    title="Zeiteintrag loeschen"
+                    aria-label="Zeiteintrag löschen"
+                    title="Zeiteintrag löschen"
                   >
                     <svg aria-hidden="true" viewBox="0 0 24 24">
                       <path d="M9 3h6l1 2h4v2H4V5h4l1-2Zm1 6h2v9h-2V9Zm4 0h2v9h-2V9ZM7 9h2l1 11h4l1-11h2l-1.2 13H8.2L7 9Z" />
@@ -91,7 +91,7 @@ export function TimeEntriesEmptyState({ entries, expandedNoteIds, language, onDe
           })}
         </div>
       ) : (
-        <div className="entries-empty">Keine Zeiteintraege fuer diesen Tag.</div>
+        <div className="entries-empty">Keine Zeiteinträge für diesen Tag.</div>
       )}
     </section>
   );

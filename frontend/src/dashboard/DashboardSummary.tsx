@@ -21,7 +21,7 @@ type DashboardSummaryProps = {
 
 export function DashboardSummary({ monthWorkTime, weekWorkTime }: DashboardSummaryProps) {
   return (
-    <section className="summary-metrics" aria-label="Zeituebersicht">
+    <section className="summary-metrics" aria-label="Zeitübersicht">
       <Metric label="Arbeitszeit (Woche)" value={weekWorkTime} />
       <Metric label="Arbeitszeit (Monat)" value={monthWorkTime} />
     </section>

@@ -49,15 +49,16 @@ export function Modal({ children, footer, onClose, onSubmit, title }: ModalProps
 }
 
 type FormRowProps = {
+  align?: "center" | "start";
   children: ReactNode;
   controlsClassName?: string;
   label: string;
   labelHidden?: boolean;
 };
 
-export function FormRow({ children, controlsClassName = "tab-form-controls", label, labelHidden = false }: FormRowProps) {
+export function FormRow({ align = "center", children, controlsClassName = "tab-form-controls", label, labelHidden = false }: FormRowProps) {
   return (
-    <div className="tab-form-row">
+    <div className={`tab-form-row ${align === "start" ? "tab-form-row--start" : ""}`}>
       <div className="tab-form-label" aria-hidden={labelHidden || undefined}>
         {label}
       </div>
