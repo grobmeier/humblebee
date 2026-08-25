@@ -16,6 +16,7 @@ package guiapp
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -34,9 +35,26 @@ func (a *App) databasePath() (string, error) {
 		return "", err
 	}
 	if settings.SelectedDatabasePath != "" {
+		if err := selectedDatabasePathExists(settings.SelectedDatabasePath); err != nil {
+			return "", err
+		}
 		return settings.SelectedDatabasePath, nil
 	}
 	return a.defaultDatabasePath()
+}
+
+func selectedDatabasePathExists(path string) error {
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("selected database does not exist: %s", path)
+		}
+		return err
+	}
+	if info.IsDir() {
+		return fmt.Errorf("selected database path is not a file: %s", path)
+	}
+	return nil
 }
 
 func (a *App) defaultDatabasePath() (string, error) {

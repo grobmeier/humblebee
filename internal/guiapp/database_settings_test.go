@@ -15,7 +15,9 @@
 package guiapp
 
 import (
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -39,6 +41,9 @@ func TestDatabasePathPersistsSelectedPath(t *testing.T) {
 
 	app := New()
 	selected := filepath.Join(t.TempDir(), "other.db")
+	if err := os.WriteFile(selected, []byte{}, 0o600); err != nil {
+		t.Fatal(err)
+	}
 	if err := app.setSelectedDatabasePath(selected); err != nil {
 		t.Fatal(err)
 	}
@@ -58,6 +63,25 @@ func TestDatabasePathPersistsSelectedPath(t *testing.T) {
 	}
 	if reloadedPath != selected {
 		t.Fatalf("expected selected database path after reload, got %q", reloadedPath)
+	}
+}
+
+func TestDatabasePathRejectsMissingSelectedPath(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HUMBLEBEE_HOME", home)
+
+	app := New()
+	selected := filepath.Join(t.TempDir(), "missing.db")
+	if err := app.setSelectedDatabasePath(selected); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := app.databasePath()
+	if err == nil {
+		t.Fatal("expected missing selected database path to fail")
+	}
+	if !strings.Contains(err.Error(), "selected database does not exist") {
+		t.Fatalf("expected selected database error, got %v", err)
 	}
 }
 
