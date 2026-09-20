@@ -1,0 +1,7 @@
+.news-content { min-width: 0; overflow-wrap: anywhere; }
+.news-content .news-privacy, .news-content .news-updated { font-size: 0.875rem; line-height: 1.5; }
+.news-items { list-style: none; padding: 0; margin: 1rem 0 0; }
+.news-items li { padding: 0.875rem 0; border-top: 1px solid #aaa6; }
+.news-items a { font-weight: 600; }
+.news-items time { display: block; margin-top: 0.25rem; font-size: 0.875rem; }
+.news-items p { margin: 0.5rem 0 0; line-height: 1.5; white-space: pre-wrap; }

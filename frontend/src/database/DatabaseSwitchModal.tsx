@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 
-import type { FormEvent } from "react";
+import { useState, type FormEvent } from "react";
+import { BackupDatabase } from "../../wailsjs/go/guiapp/App";
 import type { guiapp } from "../../wailsjs/go/models";
 import { Modal } from "../components/Modal";
 import type { DatabasePageText } from "../dashboard/translations";
 
 type DatabaseSwitchModalProps = {
   currentDatabasePath: string;
+  language: "de" | "en";
   databaseInfo: guiapp.DatabaseInfo | null;
   error: string | null;
   isSaving: boolean;
@@ -33,6 +35,7 @@ type DatabaseSwitchModalProps = {
 
 export function DatabaseSwitchModal({
   currentDatabasePath,
+  language,
   databaseInfo,
   error,
   isSaving,
@@ -42,6 +45,20 @@ export function DatabaseSwitchModal({
   onClose,
   onUseDefault
 }: DatabaseSwitchModalProps) {
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [backupPath, setBackupPath] = useState("");
+  const [backupError, setBackupError] = useState("");
+  const busy = isSaving || isBackingUp;
+  const de = language === "de";
+
+  async function backup() {
+    setIsBackingUp(true);
+    setBackupError("");
+    setBackupPath("");
+    try { setBackupPath(await BackupDatabase(currentDatabasePath)); }
+    catch (error) { setBackupError(String(error)); }
+    finally { setIsBackingUp(false); }
+  }
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
   }
@@ -49,11 +66,11 @@ export function DatabaseSwitchModal({
   return (
     <Modal
       title={t.title}
-      onClose={onClose}
+      onClose={() => { if (!busy) onClose(); }}
       onSubmit={submit}
       footer={
         <>
-          <button className="secondary-button" type="button" onClick={onUseDefault} disabled={isSaving}>
+          <button className="secondary-button" type="button" onClick={onUseDefault} disabled={busy}>
             {t.useDefault}
           </button>
         </>
@@ -70,15 +87,20 @@ export function DatabaseSwitchModal({
         ) : null}
       </div>
       <div className="database-choice-actions">
-        <button className="secondary-button database-choice-button" type="button" onClick={onOpenExisting} disabled={isSaving}>
+        <button className="secondary-button database-choice-button" type="button" onClick={onOpenExisting} disabled={busy}>
           <strong>{t.openExisting}</strong>
           <span>{t.openExistingHint}</span>
         </button>
-        <button className="secondary-button database-choice-button" type="button" onClick={onCreateNew} disabled={isSaving}>
+        <button className="secondary-button database-choice-button" type="button" onClick={onCreateNew} disabled={busy}>
           <strong>{t.createNew}</strong>
           <span>{t.createNewHint}</span>
         </button>
       </div>
+      <button className="secondary-button" type="button" disabled={busy} onClick={() => void backup()}>
+        {isBackingUp ? (de ? "Sicherung läuft…" : "Backing up…") : (de ? "Datenbank sichern" : "Back up database")}
+      </button>
+      {backupPath ? <p role="status">{de ? "Datenbank gesichert:" : "Database backed up:"} <code>{backupPath}</code></p> : null}
+      {backupError ? <div role="alert" className="errors alert alert-error">{backupError}</div> : null}
       {t.switchWarning ? <div className="alert alert-warning">{t.switchWarning}</div> : null}
       {error ? <div className="errors alert alert-error">{error}</div> : null}
     </Modal>

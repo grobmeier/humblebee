@@ -109,6 +109,8 @@ func (a *App) SelectNewDatabaseFile() (string, error) {
 }
 
 func (a *App) SwitchDatabase(path string) (*DatabaseInfo, error) {
+	databaseSelectionMu.Lock()
+	defer databaseSelectionMu.Unlock()
 	path, err := normalizeRequiredPath(path)
 	if err != nil {
 		return nil, err
@@ -130,6 +132,8 @@ func (a *App) SwitchDatabase(path string) (*DatabaseInfo, error) {
 }
 
 func (a *App) CreateDatabase(path string) (*DatabaseInfo, error) {
+	databaseSelectionMu.Lock()
+	defer databaseSelectionMu.Unlock()
 	path, err := normalizeRequiredPath(path)
 	if err != nil {
 		return nil, err
@@ -146,6 +150,8 @@ func (a *App) CreateDatabase(path string) (*DatabaseInfo, error) {
 }
 
 func (a *App) UseDefaultDatabase() (*DatabaseInfo, error) {
+	databaseSelectionMu.Lock()
+	defer databaseSelectionMu.Unlock()
 	if err := a.clearSelectedDatabasePath(); err != nil {
 		return nil, err
 	}

@@ -20,10 +20,12 @@ import { flatpickrDateFormat, formatDisplayDate, parseDisplayDate, type DateLang
 import type { TimeEntryFormState } from "./timeEntryTypes";
 import { useWindowsAltCodeInput } from "./useWindowsAltCodeInput";
 import { labelWorkItemName } from "./workItemUtils";
+import { RecentNotes } from "./RecentNotes";
 
 type WorkItem = { id: number; name: string; parentId?: number | null; depth: number; status?: string };
 
 type TimeEntryModalProps = {
+  databasePath: string;
   error: string | null;
   form: TimeEntryFormState;
   isSaving: boolean;
@@ -58,7 +60,7 @@ declare global {
   }
 }
 
-export function TimeEntryModal({ error, form, isSaving, language, t, onChange, onClose, onSubmit, workItems }: TimeEntryModalProps) {
+export function TimeEntryModal({ databasePath, error, form, isSaving, language, t, onChange, onClose, onSubmit, workItems }: TimeEntryModalProps) {
   const projects = workItems.filter((workItem) => workItem.parentId == null);
   const tasks = workItems.filter((workItem) => workItem.parentId === form.projectId);
   const noteRef = useRef<HTMLTextAreaElement | null>(null);
@@ -174,6 +176,8 @@ export function TimeEntryModal({ error, form, isSaving, language, t, onChange, o
           onKeyDown={noteAltCodeInput.onKeyDown}
           onKeyUp={noteAltCodeInput.onKeyUp}
         />
+        <RecentNotes databasePath={databasePath} taskId={form.taskId} value={form.description}
+          language={language} onSelect={(description) => onChange({ ...form, description })} />
       </FormRow>
     </Modal>
   );

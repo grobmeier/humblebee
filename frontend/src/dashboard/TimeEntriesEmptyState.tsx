@@ -16,6 +16,7 @@
 
 import { displayWorkItem, type WorkItemNode } from "./workItemUtils";
 import type { DateLanguage } from "./dateFormat";
+import { Copy } from "lucide-react";
 
 type TimeEntryRow = {
   description: string;
@@ -34,11 +35,12 @@ type TimeEntriesEmptyStateProps = {
   language: DateLanguage;
   onDeleteEntry: (entry: TimeEntryRow) => void;
   onEditEntry: (entry: TimeEntryRow) => void;
+  onDuplicateEntry: (entry: TimeEntryRow) => void;
   onToggleNote: (entryId: number) => void;
   workItems: WorkItemNode[];
 };
 
-export function TimeEntriesEmptyState({ entries, expandedNoteIds, language, onDeleteEntry, onEditEntry, onToggleNote, workItems }: TimeEntriesEmptyStateProps) {
+export function TimeEntriesEmptyState({ entries, expandedNoteIds, language, onDeleteEntry, onEditEntry, onDuplicateEntry, onToggleNote, workItems }: TimeEntriesEmptyStateProps) {
   return (
     <section className="entries-section">
       <h2>Zeiteinträge</h2>
@@ -59,6 +61,15 @@ export function TimeEntriesEmptyState({ entries, expandedNoteIds, language, onDe
                   <em>{formatDuration(entry.durationSeconds)}</em>
                 </button>
                 <div className="entry-actions">
+                  <button
+                    className="entry-icon-button"
+                    type="button"
+                    onClick={() => onDuplicateEntry(entry)}
+                    aria-label={language === "de" ? "Zeiteintrag duplizieren" : "Duplicate time entry"}
+                    title={language === "de" ? "Zeiteintrag duplizieren" : "Duplicate time entry"}
+                  >
+                    <Copy aria-hidden="true" size={16} fill="none" stroke="currentColor" />
+                  </button>
                   {hasNote ? (
                     <button
                       className="entry-icon-button has-note"

@@ -19,14 +19,18 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/grobmeier/humblebee/internal/paths"
 )
 
 const guiSettingsFileName = "gui-settings.json"
 
+var guiSettingsMu sync.Mutex
+
 type guiSettings struct {
-	SelectedDatabasePath string `json:"selectedDatabasePath"`
+	SelectedDatabasePath string          `json:"selectedDatabasePath"`
+	WorkspacePreferences json.RawMessage `json:"workspacePreferences,omitempty"`
 }
 
 func (a *App) databasePath() (string, error) {
@@ -62,6 +66,8 @@ func (a *App) defaultDatabasePath() (string, error) {
 }
 
 func (a *App) setSelectedDatabasePath(path string) error {
+	guiSettingsMu.Lock()
+	defer guiSettingsMu.Unlock()
 	absolute, err := filepath.Abs(path)
 	if err != nil {
 		return err
@@ -75,6 +81,8 @@ func (a *App) setSelectedDatabasePath(path string) error {
 }
 
 func (a *App) clearSelectedDatabasePath() error {
+	guiSettingsMu.Lock()
+	defer guiSettingsMu.Unlock()
 	settings, err := readGUISettings()
 	if err != nil {
 		return err
@@ -114,7 +122,23 @@ func writeGUISettings(settings guiSettings) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, append(body, '\n'), 0o600)
+	file, err := os.CreateTemp(filepath.Dir(path), ".gui-settings-*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(file.Name())
+	if _, err := file.Write(append(body, '\n')); err != nil {
+		file.Close()
+		return err
+	}
+	if err := file.Sync(); err != nil {
+		file.Close()
+		return err
+	}
+	if err := file.Close(); err != nil {
+		return err
+	}
+	return os.Rename(file.Name(), path)
 }
 
 func guiSettingsPath() (string, error) {

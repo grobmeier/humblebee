@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import "./app.css";
 import {
   CreateDatabase,
@@ -29,6 +29,8 @@ import {
   GetDashboard,
   GetDatabaseInfo,
   GetTimeDay,
+  GetWorkspacePreferences,
+  SaveManualSelectionPreferences,
   ImportTimeAndBill,
   Init,
   ListProjectWorkItems,
@@ -67,12 +69,15 @@ import { ProjectsPage } from "./projects/ProjectsPage";
 import { ReportsPage } from "./reports/ReportsPage";
 import { reportSlugFromHash } from "./reports/reportUtils";
 import type { ReportSlug } from "./reports/reportTypes";
+import { NewsModal } from "./news/NewsModal";
+import { Newspaper } from "lucide-react";
+import { newsCopy } from "./news/copy";
 
 type Dashboard = {
   initialized: boolean;
   dbPath: string;
   userEmail: string;
-  running: null | { workItemName: string; startTimeUTC: number };
+  running?: null | { workItemName: string; startTimeUTC: number };
   todayTotalSeconds: number;
 };
 
@@ -146,7 +151,7 @@ export default function App() {
   const [databaseBusyError, setDatabaseBusyError] = useState<DatabaseBusyError | null>(null);
   const [nowTimestamp, setNowTimestamp] = useState(() => Date.now());
   const [selectedDate, setSelectedDate] = useState(() => atLocalNoon(new Date()));
-  const [timeDay, setTimeDay] = useState<guiapp.TimeDay | null>(null);
+  const [timeDay, setTimeDay] = useState<Omit<guiapp.TimeDay, "convertValues"> | null>(null);
   const [summaryTotals, setSummaryTotals] = useState<DashboardSummaryTotals>({ monthSeconds: 0, weekSeconds: 0 });
   const [expandedNoteIds, setExpandedNoteIds] = useState<number[]>([]);
   const [stopwatches, setStopwatches] = useState<guiapp.Stopwatch[]>([]);
@@ -168,6 +173,9 @@ export default function App() {
   const [isPreviewingImport, setIsPreviewingImport] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [isDatabaseModalOpen, setIsDatabaseModalOpen] = useState(false);
+  const [isNewsOpen, setIsNewsOpen] = useState(false);
+  const [workspacePreferences, setWorkspacePreferences] = useState<guiapp.WorkspacePreferences | null>(null);
+  const refreshVersion = useRef(0);
   const [databaseInfo, setDatabaseInfo] = useState<guiapp.DatabaseInfo | null>(null);
   const [databaseModalError, setDatabaseModalError] = useState<string | null>(null);
   const [isSwitchingDatabase, setIsSwitchingDatabase] = useState(false);
@@ -188,20 +196,25 @@ export default function App() {
   }, []);
 
   async function refresh() {
+    const version = ++refreshVersion.current;
     setError("");
     setDatabaseBusyError(null);
     const d = await GetDashboard();
-    setDashboard(d);
+    if (version !== refreshVersion.current) return;
     if (d.initialized) {
-      const items = await refreshWorkItems();
-      await refreshProjectWorkItems();
+      const [preferences, items, projects, timers] = await Promise.all([
+        GetWorkspacePreferences().catch(() => null), ListWorkItems(), ListProjectWorkItems(), ListStopwatches()
+      ]);
+      if (version !== refreshVersion.current) return;
+      setWorkItems(items);
+      setProjectWorkItems(projects);
+      setStopwatches(timers);
+      setWorkspacePreferences(preferences);
       if (!selectedWorkItemId && items.length) {
         setSelectedWorkItemId(0);
       }
     }
-    if (d.initialized) {
-      await refreshStopwatches();
-    }
+    setDashboard(d);
   }
 
   function handleError(error: unknown) {
@@ -228,7 +241,7 @@ export default function App() {
       return;
     }
     refreshDashboardTime(selectedDate).catch(handleError);
-  }, [dashboard?.initialized, selectedDate]);
+  }, [dashboard?.initialized, dashboard?.dbPath, selectedDate]);
 
   async function refreshDashboardTime(date: Date) {
     await refreshTimeDay(date);
@@ -236,15 +249,19 @@ export default function App() {
   }
 
   async function refreshTimeDay(date: Date) {
+    const version = refreshVersion.current;
     const day = await GetTimeDay(formatInputDate(date));
+    if (version !== refreshVersion.current) return;
     setTimeDay(day);
   }
 
   async function refreshSummaryTotals(date: Date) {
+    const version = refreshVersion.current;
     const [weekDays, monthDays] = await Promise.all([
       Promise.all(dateRange(startOfIsoWeek(date), addDays(startOfIsoWeek(date), 6)).map((day) => GetTimeDay(formatInputDate(day)))),
       Promise.all(dateRange(startOfMonth(date), endOfMonth(date)).map((day) => GetTimeDay(formatInputDate(day))))
     ]);
+    if (version !== refreshVersion.current) return;
     setSummaryTotals({
       weekSeconds: weekDays.reduce((total, day) => total + day.workSeconds, 0),
       monthSeconds: monthDays.reduce((total, day) => total + day.workSeconds, 0)
@@ -269,6 +286,8 @@ export default function App() {
   }
 
   function clearWorkspaceState() {
+    refreshVersion.current += 1;
+    setWorkspacePreferences(null);
     setWorkItems([]);
     setProjectWorkItems([]);
     setStopwatches([]);
@@ -567,7 +586,10 @@ export default function App() {
     setTimeEntryModalError(null);
     setIsStopwatchConfirmationModal(false);
     setConfirmationStopwatchId(null);
-    const selection = timeEntrySelectionForWorkItem(selectedWorkItemId);
+    const remembered = workspacePreferences?.manualSelection;
+    const project = workItems.find((item) => item.id === remembered?.projectId && item.parentId == null);
+    const task = workItems.find((item) => item.id === remembered?.taskId && item.parentId === project?.id);
+    const selection = project ? { projectId: project.id, taskId: task?.id ?? 0 } : { projectId: 0, taskId: 0 };
     setTimeEntryForm(createTimeEntryForm(date, selection.projectId, selection.taskId));
     setIsTimeEntryModalOpen(true);
   }
@@ -588,6 +610,20 @@ export default function App() {
       startTime: entry.startTime,
       taskId: selection.taskId,
       untilMidnight: false
+    });
+    setIsTimeEntryModalOpen(true);
+  }
+
+  function onDuplicateEntry(entry: guiapp.TimeEntry) {
+    const task = workItems.find((item) => item.id === entry.workItemId && (!item.status || item.status === "ACTIVE"));
+    const project = workItems.find((item) => item.id === task?.parentId && (!item.status || item.status === "ACTIVE"));
+    setError("");
+    setTimeEntryModalError(null);
+    setIsStopwatchConfirmationModal(false);
+    setConfirmationStopwatchId(null);
+    setTimeEntryForm({
+      ...createTimeEntryForm(selectedDate, project?.id ?? 0, project ? task?.id ?? 0 : 0),
+      description: entry.description
     });
     setIsTimeEntryModalOpen(true);
   }
@@ -696,6 +732,13 @@ export default function App() {
       } else {
         await CreateTimeEntry(payload);
       }
+      if (!timeEntryForm.id && !isStopwatchConfirmationModal && workspacePreferences) {
+        try {
+          await SaveManualSelectionPreferences(workspacePreferences.workspaceKey, {
+            projectId: timeEntryForm.projectId, taskId: timeEntryForm.taskId
+          });
+        } catch { /* A preference failure must not turn a successful booking into an error. */ }
+      }
       if (isStopwatchConfirmationModal && confirmationStopwatchId !== null) {
         await DiscardStopwatch(confirmationStopwatchId);
       }
@@ -791,12 +834,20 @@ export default function App() {
           <a className={activePage === "projects" ? "selected" : ""} href="#projects">{t.nav.projects}</a>
         </nav>
         <div className="user-meta">
+          <button className="icon-button" type="button" onClick={() => setIsNewsOpen(true)}
+            aria-label={newsCopy[language].actionLabel}
+            title={newsCopy[language].actionLabel}>
+            <Newspaper aria-hidden="true" size={20} />
+          </button>
           <button className="icon-button" type="button" onClick={openImportModal} aria-label={t.importPage.importButton} title={t.importPage.importButton}>
             <ImportIcon />
           </button>
           <button className="icon-button" type="button" onClick={() => void openDatabaseModal()} aria-label={t.databasePage.switchButton} title={t.databasePage.switchButton}>
             <DatabaseSwitchIcon />
           </button>
+          <span className="active-database-name" title={dashboard.dbPath} aria-label={dashboard.dbPath}>
+            {dashboard.dbPath.split(/[\\/]/).pop()}
+          </span>
           <div className="language-switch" aria-label="Language">
             <button className={language === "de" ? "active" : ""} type="button" onClick={() => setLanguage("de")}>
               DE
@@ -832,6 +883,7 @@ export default function App() {
                   workItems={workItems}
                   onDeleteEntry={onDeleteEntry}
                   onEditEntry={onEditEntry}
+                  onDuplicateEntry={onDuplicateEntry}
                   onToggleNote={onToggleEntryNote}
                 />
               </section>
@@ -871,10 +923,11 @@ export default function App() {
             onUpdateTask={onUpdateTask}
           />
         ) : null}
-        {activePage === "reports" ? <ReportsPage activeReport={activeReport} language={language} workItems={projectWorkItems} /> : null}
+        {activePage === "reports" ? <ReportsPage key={workspacePreferences?.workspaceKey ?? dashboard.dbPath} workspaceKey={workspacePreferences?.workspaceKey ?? ""} activeReport={activeReport} language={language} workItems={projectWorkItems} /> : null}
       </div>
       {isTimeEntryModalOpen ? (
         <TimeEntryModal
+          databasePath={dashboard.dbPath}
           error={timeEntryModalError}
           form={timeEntryForm}
           isSaving={isSavingTimeEntry}
@@ -907,6 +960,7 @@ export default function App() {
       ) : null}
       {isDatabaseModalOpen ? (
         <DatabaseSwitchModal
+          language={language}
           currentDatabasePath={dashboard.dbPath}
           databaseInfo={databaseInfo}
           error={databaseModalError}
@@ -918,6 +972,7 @@ export default function App() {
           onUseDefault={() => void useDefaultDatabase()}
         />
       ) : null}
+      {isNewsOpen ? <NewsModal language={language} onClose={() => setIsNewsOpen(false)} /> : null}
     </main>
   );
 }
