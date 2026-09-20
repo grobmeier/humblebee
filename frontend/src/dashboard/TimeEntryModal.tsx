@@ -25,12 +25,14 @@ import { RecentNotes } from "./RecentNotes";
 type WorkItem = { id: number; name: string; parentId?: number | null; depth: number; status?: string };
 
 type TimeEntryModalProps = {
+  archivedSource: string | null;
   databasePath: string;
   error: string | null;
   form: TimeEntryFormState;
   isSaving: boolean;
   language: DateLanguage;
   t: {
+    archivedSource: string;
     end: string;
     note: string;
     project: string;
@@ -60,7 +62,7 @@ declare global {
   }
 }
 
-export function TimeEntryModal({ databasePath, error, form, isSaving, language, t, onChange, onClose, onSubmit, workItems }: TimeEntryModalProps) {
+export function TimeEntryModal({ archivedSource, databasePath, error, form, isSaving, language, t, onChange, onClose, onSubmit, workItems }: TimeEntryModalProps) {
   const projects = workItems.filter((workItem) => workItem.parentId == null);
   const tasks = workItems.filter((workItem) => workItem.parentId === form.projectId);
   const noteRef = useRef<HTMLTextAreaElement | null>(null);
@@ -81,6 +83,7 @@ export function TimeEntryModal({ databasePath, error, form, isSaving, language, 
         </button>
       }
     >
+      {archivedSource ? <div className="errors alert alert-warning">{t.archivedSource.replace("{source}", archivedSource)}</div> : null}
       {error ? <div className="errors alert alert-error">{error}</div> : null}
       <FormRow label={t.start} controlsClassName="tab-form-controls tab-form-controls--inline">
         <DashboardDateInput

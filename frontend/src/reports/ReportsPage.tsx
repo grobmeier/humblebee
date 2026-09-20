@@ -69,7 +69,7 @@ export function ReportsPage({ activeReport, language, workItems, workspaceKey }:
     setData(null);
     setExportPath(null);
     setError(null);
-    if (!ready || (definition.needsProject && !filter.projectId)) {
+    if (!ready || (definition.requiresExplicitProject && !filter.projectId)) {
       setIsLoading(false);
       return;
     }
@@ -79,10 +79,10 @@ export function ReportsPage({ activeReport, language, workItems, workspaceKey }:
       .catch((err) => { if (!cancelled) setError(String(err)); })
       .finally(() => { if (!cancelled) setIsLoading(false); });
     return () => { cancelled = true; };
-  }, [activeReport, filter, language, ready, workspaceKey, definition.needsProject]);
+  }, [activeReport, filter, language, ready, workspaceKey, definition.requiresExplicitProject]);
 
   async function exportReport() {
-    if (!ready || (definition.needsProject && !filter.projectId)) return;
+    if (!ready || (definition.requiresExplicitProject && !filter.projectId)) return;
     const context = exportContext.current;
     setError(null);
     try {
@@ -111,7 +111,7 @@ export function ReportsPage({ activeReport, language, workItems, workspaceKey }:
           filter={filter}
           language={language}
           needsProject={definition.needsProject}
-          projectPlaceholder={t.selectProject}
+          projectPlaceholder={definition.requiresExplicitProject ? t.selectProject : t.firstReportableProject}
           projectOptions={projectOptions}
           showDecimal={showDecimal}
           supportsDecimal={definition.decimalToggle}

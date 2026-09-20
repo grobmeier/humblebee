@@ -41,6 +41,25 @@ test.describe("everyday usability", () => {
     expect(state.createdEntries[0]).toMatchObject({ id: 0, description: "• Prüfung │ März\nZweite Zeile" });
   });
 
+  test("requires an active replacement when duplicating an archived task entry", async ({ page }) => {
+    await installHumbleBeeMock(page, { archivedEntrySource: true });
+    await page.goto("/");
+    await page.getByRole("button", { name: "Zeiteintrag duplizieren" }).click();
+
+    const modal = page.locator(".modal-form");
+    await expect(modal.getByText("„Closed client - Historical reconciliation“ ist nicht mehr aktiv.")).toBeVisible();
+    const selects = modal.locator("select");
+    await expect(selects.nth(0)).toHaveValue("0");
+    await expect(selects.nth(1)).toBeDisabled();
+    await expect(modal.getByRole("button", { name: "Speichern" })).toBeDisabled();
+
+    await selects.nth(0).selectOption("3");
+    await expect(selects.nth(1)).toHaveValue("4");
+    await modal.getByRole("button", { name: "Speichern" }).click();
+    const state = await mockState<{ createdEntries: { workItemId: number }[] }>(page);
+    expect(state.createdEntries).toEqual([expect.objectContaining({ workItemId: 4 })]);
+  });
+
   test("restores the saved project report filter without choosing another project", async ({ page }) => {
     await installHumbleBeeMock(page, {
       reportPreferences: {

@@ -157,6 +157,7 @@ export default function App() {
   const [stopwatches, setStopwatches] = useState<guiapp.Stopwatch[]>([]);
   const [timeEntryForm, setTimeEntryForm] = useState<TimeEntryFormState>(() => createTimeEntryForm(atLocalNoon(new Date()), 0));
   const [timeEntryModalError, setTimeEntryModalError] = useState<string | null>(null);
+  const [timeEntryArchivedSource, setTimeEntryArchivedSource] = useState<string | null>(null);
   const [isTimeEntryModalOpen, setIsTimeEntryModalOpen] = useState(false);
   const [isSavingTimeEntry, setIsSavingTimeEntry] = useState(false);
   const [isStopwatchConfirmationModal, setIsStopwatchConfirmationModal] = useState(false);
@@ -301,6 +302,7 @@ export default function App() {
   async function refreshAfterDatabaseChange() {
     clearWorkspaceState();
     setIsTimeEntryModalOpen(false);
+    setTimeEntryArchivedSource(null);
     setConfirmationStopwatchId(null);
     await refresh();
   }
@@ -584,6 +586,7 @@ export default function App() {
   function onAddEntry(date = selectedDate) {
     setError("");
     setTimeEntryModalError(null);
+    setTimeEntryArchivedSource(null);
     setIsStopwatchConfirmationModal(false);
     setConfirmationStopwatchId(null);
     const remembered = workspacePreferences?.manualSelection;
@@ -598,6 +601,7 @@ export default function App() {
     const selection = timeEntrySelectionForWorkItem(entry.workItemId ?? selectedWorkItemId);
     setError("");
     setTimeEntryModalError(null);
+    setTimeEntryArchivedSource(null);
     setIsStopwatchConfirmationModal(false);
     setConfirmationStopwatchId(null);
     setTimeEntryForm({
@@ -617,8 +621,15 @@ export default function App() {
   function onDuplicateEntry(entry: guiapp.TimeEntry) {
     const task = workItems.find((item) => item.id === entry.workItemId && (!item.status || item.status === "ACTIVE"));
     const project = workItems.find((item) => item.id === task?.parentId && (!item.status || item.status === "ACTIVE"));
+    const sourceTask = projectWorkItems.find((item) => item.id === entry.workItemId);
+    const sourceProject = projectWorkItems.find((item) => item.id === sourceTask?.parentId);
     setError("");
     setTimeEntryModalError(null);
+    setTimeEntryArchivedSource(
+      (project && task) || !sourceTask
+        ? null
+        : sourceProject ? `${sourceProject.name} - ${sourceTask.name}` : sourceTask.name
+    );
     setIsStopwatchConfirmationModal(false);
     setConfirmationStopwatchId(null);
     setTimeEntryForm({
@@ -663,6 +674,7 @@ export default function App() {
     const selection = timeEntrySelectionForWorkItem(error.workItemId || selectedWorkItemId);
     setError("");
     setTimeEntryModalError(t.timeEntryModal.conflictMessage);
+    setTimeEntryArchivedSource(null);
     setTimeEntryForm({
       description: "",
       endDate: error.endDate,
@@ -684,6 +696,7 @@ export default function App() {
     const selection = timeEntrySelectionForWorkItem(stopwatch.workItemId ?? selectedWorkItemId);
     setError("");
     setTimeEntryModalError(t.timeEntryModal.conflictMessage);
+    setTimeEntryArchivedSource(null);
     setTimeEntryForm({
       description: "",
       endDate: stopwatch.endDate,
@@ -750,6 +763,7 @@ export default function App() {
       setConfirmationStopwatchId(null);
       setIsStopwatchConfirmationModal(false);
       setIsTimeEntryModalOpen(false);
+      setTimeEntryArchivedSource(null);
     } catch (e) {
       if (parseDatabaseBusyError(e)) {
         handleError(e);
@@ -929,6 +943,7 @@ export default function App() {
         <TimeEntryModal
           databasePath={dashboard.dbPath}
           error={timeEntryModalError}
+          archivedSource={timeEntryArchivedSource}
           form={timeEntryForm}
           isSaving={isSavingTimeEntry}
           language={language}
@@ -938,6 +953,7 @@ export default function App() {
           onClose={() => {
             setIsStopwatchConfirmationModal(false);
             setConfirmationStopwatchId(null);
+            setTimeEntryArchivedSource(null);
             setIsTimeEntryModalOpen(false);
           }}
           onSubmit={onSubmitTimeEntry}

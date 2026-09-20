@@ -1,11 +1,12 @@
 import type { Page } from "@playwright/test";
 
 export type MockOptions = {
+  archivedEntrySource?: boolean;
   reportPreferences?: Record<string, unknown> | null;
 };
 
 export async function installHumbleBeeMock(page: Page, options: MockOptions = {}) {
-  await page.addInitScript(({ reportPreferences }) => {
+  await page.addInitScript(({ archivedEntrySource, reportPreferences }) => {
     let databasePath = "/test/humblebee-accounting.db";
     const workItems = [
       { id: 1, name: "Accounting", parentId: null, depth: 0, status: "ACTIVE" },
@@ -13,9 +14,12 @@ export async function installHumbleBeeMock(page: Page, options: MockOptions = {}
       { id: 3, name: "Advisory", parentId: null, depth: 0, status: "ACTIVE" },
       { id: 4, name: "Client meeting", parentId: 3, depth: 1, status: "ACTIVE" }
     ];
+    const projectWorkItems = archivedEntrySource
+      ? [...workItems, { id: 5, name: "Historical reconciliation", parentId: 6, depth: 1, status: "ARCHIVED" }, { id: 6, name: "Closed client", parentId: null, depth: 0, status: "ARCHIVED" }]
+      : workItems;
     const entry = {
       id: 1,
-      workItemId: 2,
+      workItemId: archivedEntrySource ? 5 : 2,
       description: "Original note",
       startDate: "2026-09-20",
       endDate: "2026-09-20",
@@ -34,6 +38,7 @@ export async function installHumbleBeeMock(page: Page, options: MockOptions = {}
       importedFiles: [] as string[],
       newsRequests: 0,
       openedURLs: [] as string[],
+      reportRequests: [] as Record<string, unknown>[],
       savedManualSelections: [] as Record<string, unknown>[],
       selectedDatabasePaths: [] as string[],
       startedWorkItems: [] as number[],
@@ -105,14 +110,14 @@ export async function installHumbleBeeMock(page: Page, options: MockOptions = {}
             };
           },
           GetRecentNotes: async () => ["• Prüfung │ März\nZweite Zeile", "Quarterly review"],
-          GetTimesheetReport: async () => emptyReport,
+          GetTimesheetReport: async (request: Record<string, unknown>) => { state.reportRequests.push({ report: "timesheet", request }); return emptyReport; },
           GetTimeDay: async (date: string) => timeDay(date),
-          GetWorktimeByMonthReport: async () => emptyReport,
-          GetWorktimeGroupedByProjectReport: async () => emptyReport,
-          GetWorktimeProjectDetailsReport: async () => emptyReport,
-          GetWorktimeTaskDetailsReport: async () => emptyReport,
+          GetWorktimeByMonthReport: async (request: Record<string, unknown>) => { state.reportRequests.push({ report: "worktime-by-month", request }); return emptyReport; },
+          GetWorktimeGroupedByProjectReport: async (request: Record<string, unknown>) => { state.reportRequests.push({ report: "worktime-grouped-by-project", request }); return emptyReport; },
+          GetWorktimeProjectDetailsReport: async (request: Record<string, unknown>) => { state.reportRequests.push({ report: "worktime-project-details", request }); return emptyReport; },
+          GetWorktimeTaskDetailsReport: async (request: Record<string, unknown>) => { state.reportRequests.push({ report: "worktime-task-details", request }); return emptyReport; },
           GetWorkspacePreferences: async () => state.preferences,
-          ListProjectWorkItems: async () => workItems,
+          ListProjectWorkItems: async () => projectWorkItems,
           ImportTimeAndBill: async (path: string) => {
             state.importedFiles.push(path);
             return {

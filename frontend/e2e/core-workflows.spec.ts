@@ -76,6 +76,25 @@ test.describe("core workflows", () => {
     })]);
   });
 
+  test("loads and exports task details with the first reportable project", async ({ page }) => {
+    await installHumbleBeeMock(page);
+    await page.goto("/#reports/worktime-task-details");
+
+    const projectFilter = page.locator(".report-filter-controls select").first();
+    await expect(projectFilter).toHaveValue("0");
+    await expect(projectFilter.locator("option").first()).toHaveText("Erstes auswertbares Projekt");
+    await expect.poll(async () => (await mockState<{ reportRequests: { report: string; request: { projectId: number } }[] }>(page)).reportRequests)
+      .toContainEqual(expect.objectContaining({ report: "worktime-task-details", request: expect.objectContaining({ projectId: 0 }) }));
+
+    await page.getByRole("button", { name: "Excel exportieren" }).click();
+    await expect(page.getByText("/test/task-details.xlsx", { exact: true })).toBeVisible();
+    const state = await mockState<{ exportRequests: { report: string; request: { projectId: number } }[] }>(page);
+    expect(state.exportRequests).toEqual([expect.objectContaining({
+      report: "worktime-task-details",
+      request: expect.objectContaining({ projectId: 0 })
+    })]);
+  });
+
   test("previews an import before importing it once", async ({ page }) => {
     await installHumbleBeeMock(page);
     await page.goto("/");
