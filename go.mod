@@ -8,7 +8,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/olekukonko/tablewriter v1.1.5
 	github.com/spf13/cobra v1.10.2
-	github.com/wailsapp/wails/v2 v2.15.0
+	github.com/wailsapp/wails/v2 v2.16.0
 	modernc.org/sqlite v1.59.0
 )
 
