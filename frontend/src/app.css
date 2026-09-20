@@ -320,6 +320,22 @@ code {
   font-size: 13px;
 }
 
+.active-database-name {
+  max-width: 160px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-notes { margin-top: 8px; }
+.recent-notes summary { cursor: pointer; }
+.recent-notes ul { padding: 0; list-style: none; }
+.recent-notes li { margin: 6px 0; }
+.recent-notes button { max-width: 100%; text-align: left; overflow-wrap: anywhere; }
+.recent-notes-confirm { margin-top: 8px; }
+.recent-notes-confirm button { margin-right: 8px; }
+
 .language-switch {
   display: inline-flex;
   align-items: center;
@@ -870,7 +886,8 @@ code {
 
 .entry-actions {
   display: grid;
-  grid-template-columns: 28px 28px;
+  grid-auto-flow: column;
+  grid-auto-columns: 28px;
   align-items: center;
   gap: 6px;
 }
@@ -906,6 +923,8 @@ code {
   height: 15px;
   fill: currentColor;
 }
+
+.entry-icon-button svg.lucide { fill: none; }
 
 .entry-note {
   grid-column: 1 / -1;
@@ -1092,6 +1111,7 @@ code {
   align-items: flex-start;
   justify-content: center;
   padding: 80px 24px 24px;
+  overflow-y: auto;
   background: rgba(0, 0, 0, 0.35);
 }
 
@@ -1174,6 +1194,7 @@ code {
 .tab-form-controls {
   display: grid;
   gap: 8px;
+  min-width: 0;
 }
 
 .tab-form-controls--inline {
@@ -1201,6 +1222,17 @@ code {
   gap: 8px;
   min-height: 34px;
   color: #333;
+}
+
+@media (max-width: 560px) {
+  .tab-modal { padding: 16px 12px; }
+  .tab-form-row { grid-template-columns: 1fr; gap: 4px; }
+  .tab-form-label { justify-content: flex-start; text-align: left; min-height: 24px; }
+  .tab-form-label[aria-hidden="true"] { display: none; }
+  .tab-form-controls--inline { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .tab-form-control--small { width: 100%; min-width: 0; }
+  .modal-footer { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+  .entry-row { grid-template-columns: 1fr; gap: 4px; }
 }
 
 .alert-error {
@@ -1429,7 +1461,11 @@ code {
 
   .user-meta {
     margin-left: auto;
+    gap: 8px;
+    max-width: calc(100% - 49px);
   }
+
+  .active-database-name { max-width: 90px; }
 
   .content {
     padding: 22px 16px 32px;

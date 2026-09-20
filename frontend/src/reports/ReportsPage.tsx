@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ExportTimesheetReport,
   ExportWorktimeByMonthReport,
@@ -33,22 +33,26 @@ import { labelWorkItemName } from "../dashboard/workItemUtils";
 import { ReportFilterBar } from "./ReportFilterBar";
 import { GroupedByProjectTable, ProjectDetailsTable, TaskDetailsTable, TimesheetTable, WorktimeByMonthTable } from "./ReportTables";
 import { ReportsNavigation } from "./ReportsNavigation";
-import { defaultReportFilter, fileURL, toReportRequest } from "./reportUtils";
+import { fileURL, toReportRequest } from "./reportUtils";
+import { useReportPreferences } from "../preferences/useReportPreferences";
 import { reportDefinitions, type ReportData, type ReportFilter, type ReportSlug, type ReportsPageText, type WorkItem } from "./reportTypes";
 
 type ReportsPageProps = {
   activeReport: ReportSlug;
   language: Language;
   workItems: WorkItem[];
+  workspaceKey: string;
 };
 
-export function ReportsPage({ activeReport, language, workItems }: ReportsPageProps) {
-  const [filter, setFilter] = useState<ReportFilter>(() => defaultReportFilter());
+export function ReportsPage({ activeReport, language, workItems, workspaceKey }: ReportsPageProps) {
+  const { filter, setFilter, showDecimal, setShowDecimal, ready } = useReportPreferences(workspaceKey, activeReport, workItems);
   const [data, setData] = useState<{ report: ReportSlug; value: ReportData } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [exportPath, setExportPath] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [showDecimal, setShowDecimal] = useState(false);
+  const currentExportContext = useMemo(() => ({ workspaceKey, activeReport, filter, language }), [workspaceKey, activeReport, filter, language]);
+  const exportContext = useRef(currentExportContext);
+  exportContext.current = currentExportContext;
   const t = translations[language].reportsPage;
   const definition = reportDefinitions.find((report) => report.slug === activeReport) ?? reportDefinitions[0];
   const projectOptions = useMemo(
@@ -61,21 +65,31 @@ export function ReportsPage({ activeReport, language, workItems }: ReportsPagePr
   );
 
   useEffect(() => {
+    let cancelled = false;
+    setData(null);
     setExportPath(null);
     setError(null);
+    if (!ready || (definition.requiresExplicitProject && !filter.projectId)) {
+      setIsLoading(false);
+      return;
+    }
     setIsLoading(true);
     loadReport(activeReport, filter, language)
-      .then((value) => setData({ report: activeReport, value }))
-      .catch((err) => setError(String(err)))
-      .finally(() => setIsLoading(false));
-  }, [activeReport, filter, language]);
+      .then((value) => { if (!cancelled) setData({ report: activeReport, value }); })
+      .catch((err) => { if (!cancelled) setError(String(err)); })
+      .finally(() => { if (!cancelled) setIsLoading(false); });
+    return () => { cancelled = true; };
+  }, [activeReport, filter, language, ready, workspaceKey, definition.requiresExplicitProject]);
 
   async function exportReport() {
+    if (!ready || (definition.requiresExplicitProject && !filter.projectId)) return;
+    const context = exportContext.current;
     setError(null);
     try {
-      setExportPath(await exportActiveReport(activeReport, filter, language));
+      const path = await exportActiveReport(activeReport, filter, language);
+      if (exportContext.current === context) setExportPath(path);
     } catch (err) {
-      setError(String(err));
+      if (exportContext.current === context) setError(String(err));
     }
   }
 
@@ -93,7 +107,7 @@ export function ReportsPage({ activeReport, language, workItems }: ReportsPagePr
             ) : null}
           </div>
         </div>
-        <ReportFilterBar
+        {ready ? <ReportFilterBar
           filter={filter}
           language={language}
           needsProject={definition.needsProject}
@@ -106,7 +120,7 @@ export function ReportsPage({ activeReport, language, workItems }: ReportsPagePr
           onExport={() => void exportReport()}
           onPrint={() => window.print()}
           onToggleDecimal={() => setShowDecimal((value) => !value)}
-        />
+        /> : <p className="projects-empty">{t.loadingReport}</p>}
         {exportPath ? (
           <p className="report-export-path hide-print">
             {t.savedTo} <a href={fileURL(exportPath)}>{exportPath}</a>
@@ -114,7 +128,7 @@ export function ReportsPage({ activeReport, language, workItems }: ReportsPagePr
         ) : null}
         {error ? <div className="errors alert alert-error">{error}</div> : null}
         {isLoading ? <p className="projects-empty">{t.loadingReport}</p> : null}
-        {!isLoading && data?.report === activeReport ? renderReport(activeReport, data.value, showDecimal, language, t) : null}
+        {!isLoading && ready && data?.report === activeReport ? renderReport(activeReport, data.value, showDecimal, language, t) : null}
       </section>
     </section>
   );

@@ -158,6 +158,7 @@ export const translations = {
       stopStopwatch: "Stoppen"
     },
     timeEntryModal: {
+      archivedSource: "„{source}“ ist nicht mehr aktiv. Wähle ein aktives Projekt und eine aktive Tätigkeit für die Kopie.",
       conflictMessage: "Die Stoppuhr überschneidet sich mit bereits gebuchter Zeit. Passe den Zeitraum an und speichere den Eintrag.",
       end: "Ende",
       note: "Notiz",
@@ -313,6 +314,7 @@ export const translations = {
       stopStopwatch: "Stop"
     },
     timeEntryModal: {
+      archivedSource: "\"{source}\" is no longer active. Choose an active project and task for the copy.",
       conflictMessage: "The stopwatch overlaps with booked time. Adjust the time range and save the entry.",
       end: "End",
       note: "Note",
@@ -468,6 +470,7 @@ export const translations = {
     stopStopwatch: string;
   };
   timeEntryModal: {
+    archivedSource: string;
     conflictMessage: string;
     end: string;
     note: string;

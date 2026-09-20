@@ -1,5 +1,5 @@
 export namespace guiapp {
-	
+
 	export class CreateTimeEntryRequest {
 	    id: number;
 	    workItemId: number;
@@ -9,11 +9,11 @@ export namespace guiapp {
 	    endDate: string;
 	    endTime: string;
 	    untilMidnight: boolean;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new CreateTimeEntryRequest(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -29,11 +29,11 @@ export namespace guiapp {
 	export class RunningTimer {
 	    workItemName: string;
 	    startTimeUTC: number;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new RunningTimer(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.workItemName = source["workItemName"];
@@ -46,11 +46,11 @@ export namespace guiapp {
 	    userEmail: string;
 	    running?: RunningTimer;
 	    todayTotalSeconds: number;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new Dashboard(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.initialized = source["initialized"];
@@ -59,7 +59,7 @@ export namespace guiapp {
 	        this.running = this.convertValues(source["running"], RunningTimer);
 	        this.todayTotalSeconds = source["todayTotalSeconds"];
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -82,11 +82,11 @@ export namespace guiapp {
 	    path: string;
 	    defaultPath: string;
 	    initialized: boolean;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new DatabaseInfo(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.path = source["path"];
@@ -103,11 +103,11 @@ export namespace guiapp {
 	    localEntryId: number;
 	    localStart: number;
 	    localEnd: number;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new ImportConflict(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.timeEntryUuid = source["timeEntryUuid"];
@@ -134,11 +134,11 @@ export namespace guiapp {
 	    timeEntriesSkipped: number;
 	    timeEntryConflicts: number;
 	    needsConfirmation: number;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new ImportSummary(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.exportUuid = source["exportUuid"];
@@ -163,11 +163,11 @@ export namespace guiapp {
 	    existingTimeEntryCount: number;
 	    summary: ImportSummary;
 	    conflicts: ImportConflict[];
-	
+
 	    static createFrom(source: any = {}) {
 	        return new ImportPreview(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.exportUuid = source["exportUuid"];
@@ -177,7 +177,7 @@ export namespace guiapp {
 	        this.summary = this.convertValues(source["summary"], ImportSummary);
 	        this.conflicts = this.convertValues(source["conflicts"], ImportConflict);
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -199,17 +199,17 @@ export namespace guiapp {
 	export class ImportResult {
 	    summary: ImportSummary;
 	    conflicts: ImportConflict[];
-	
+
 	    static createFrom(source: any = {}) {
 	        return new ImportResult(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.summary = this.convertValues(source["summary"], ImportSummary);
 	        this.conflicts = this.convertValues(source["conflicts"], ImportConflict);
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -228,7 +228,109 @@ export namespace guiapp {
 		    return a;
 		}
 	}
-	
+
+	export class ManualSelectionPreferences {
+	    projectId: number;
+	    taskId: number;
+
+	    static createFrom(source: any = {}) {
+	        return new ManualSelectionPreferences(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.projectId = source["projectId"];
+	        this.taskId = source["taskId"];
+	    }
+	}
+	export class NewsItem {
+	    guid: string;
+	    title: string;
+	    url: string;
+	    publishedAt: string;
+	    summary: string;
+
+	    static createFrom(source: any = {}) {
+	        return new NewsItem(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.guid = source["guid"];
+	        this.title = source["title"];
+	        this.url = source["url"];
+	        this.publishedAt = source["publishedAt"];
+	        this.summary = source["summary"];
+	    }
+	}
+	export class NewsResult {
+	    items: NewsItem[];
+	    fetchedAt: string;
+	    cached: boolean;
+	    unavailable: boolean;
+	    cacheWriteFailed: boolean;
+
+	    static createFrom(source: any = {}) {
+	        return new NewsResult(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.items = this.convertValues(source["items"], NewsItem);
+	        this.fetchedAt = source["fetchedAt"];
+	        this.cached = source["cached"];
+	        this.unavailable = source["unavailable"];
+	        this.cacheWriteFailed = source["cacheWriteFailed"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class ReportPreferences {
+	    report: string;
+	    mode: string;
+	    month: number;
+	    startMonth: number;
+	    endMonth: number;
+	    year: number;
+	    startDate: string;
+	    endDate: string;
+	    projectId: number;
+	    showDecimal: boolean;
+
+	    static createFrom(source: any = {}) {
+	        return new ReportPreferences(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.report = source["report"];
+	        this.mode = source["mode"];
+	        this.month = source["month"];
+	        this.startMonth = source["startMonth"];
+	        this.endMonth = source["endMonth"];
+	        this.year = source["year"];
+	        this.startDate = source["startDate"];
+	        this.endDate = source["endDate"];
+	        this.projectId = source["projectId"];
+	        this.showDecimal = source["showDecimal"];
+	    }
+	}
 	export class ReportRequest {
 	    mode: string;
 	    month: number;
@@ -239,11 +341,11 @@ export namespace guiapp {
 	    endDate: string;
 	    projectId: number;
 	    language: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new ReportRequest(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.mode = source["mode"];
@@ -257,16 +359,16 @@ export namespace guiapp {
 	        this.language = source["language"];
 	    }
 	}
-	
+
 	export class StopResult {
 	    workItemName: string;
 	    durationSeconds: number;
 	    todayTotalSeconds: number;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new StopResult(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.workItemName = source["workItemName"];
@@ -285,11 +387,11 @@ export namespace guiapp {
 	    durationSeconds: number;
 	    running: boolean;
 	    conflicting: boolean;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new Stopwatch(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -313,11 +415,11 @@ export namespace guiapp {
 	    endDate: string;
 	    endTime: string;
 	    durationSeconds: number;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new TimeEntry(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -338,11 +440,11 @@ export namespace guiapp {
 	    absenceSeconds: number;
 	    workSeconds: number;
 	    breakSeconds: number;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new TimeDay(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.date = source["date"];
@@ -353,7 +455,7 @@ export namespace guiapp {
 	        this.workSeconds = source["workSeconds"];
 	        this.breakSeconds = source["breakSeconds"];
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -372,18 +474,18 @@ export namespace guiapp {
 		    return a;
 		}
 	}
-	
+
 	export class TimesheetDailyRow {
 	    date: string;
 	    totalSeconds: number;
 	    totalDuration: string;
 	    projectSeconds: number;
 	    projectDuration: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new TimesheetDailyRow(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.date = source["date"];
@@ -398,11 +500,11 @@ export namespace guiapp {
 	    projectName: string;
 	    durationSeconds: number;
 	    duration: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new TimesheetProjectRow(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.projectId = source["projectId"];
@@ -418,11 +520,11 @@ export namespace guiapp {
 	    dailyRows: TimesheetDailyRow[];
 	    totalSeconds: number;
 	    totalDuration: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new TimesheetReport(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.empty = source["empty"];
@@ -432,7 +534,7 @@ export namespace guiapp {
 	        this.totalSeconds = source["totalSeconds"];
 	        this.totalDuration = source["totalDuration"];
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -457,11 +559,11 @@ export namespace guiapp {
 	    parentId?: number;
 	    depth: number;
 	    status: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new WorkItem(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -470,6 +572,40 @@ export namespace guiapp {
 	        this.depth = source["depth"];
 	        this.status = source["status"];
 	    }
+	}
+	export class WorkspacePreferences {
+	    workspaceKey: string;
+	    reports?: ReportPreferences;
+	    manualSelection?: ManualSelectionPreferences;
+
+	    static createFrom(source: any = {}) {
+	        return new WorkspacePreferences(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.workspaceKey = source["workspaceKey"];
+	        this.reports = this.convertValues(source["reports"], ReportPreferences);
+	        this.manualSelection = this.convertValues(source["manualSelection"], ManualSelectionPreferences);
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 	export class WorktimeReportRow {
 	    projectId: number;
@@ -482,11 +618,11 @@ export namespace guiapp {
 	    endTime: string;
 	    durationSeconds: number;
 	    duration: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new WorktimeReportRow(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.projectId = source["projectId"];
@@ -506,11 +642,11 @@ export namespace guiapp {
 	    rows: WorktimeReportRow[];
 	    totalSeconds: number;
 	    totalDuration: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new WorktimeByMonthReport(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.empty = source["empty"];
@@ -518,7 +654,7 @@ export namespace guiapp {
 	        this.totalSeconds = source["totalSeconds"];
 	        this.totalDuration = source["totalDuration"];
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -543,11 +679,11 @@ export namespace guiapp {
 	    rows: WorktimeReportRow[];
 	    totalSeconds: number;
 	    totalDuration: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new WorktimeProjectGroup(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.projectId = source["projectId"];
@@ -556,7 +692,7 @@ export namespace guiapp {
 	        this.totalSeconds = source["totalSeconds"];
 	        this.totalDuration = source["totalDuration"];
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -580,11 +716,11 @@ export namespace guiapp {
 	    groups: WorktimeProjectGroup[];
 	    totalSeconds: number;
 	    totalDuration: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new WorktimeGroupedByProjectReport(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.empty = source["empty"];
@@ -592,7 +728,7 @@ export namespace guiapp {
 	        this.totalSeconds = source["totalSeconds"];
 	        this.totalDuration = source["totalDuration"];
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -616,11 +752,11 @@ export namespace guiapp {
 	    rows: WorktimeReportRow[];
 	    totalSeconds: number;
 	    totalDuration: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new WorktimeProjectDetailsReport(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.empty = source["empty"];
@@ -628,7 +764,7 @@ export namespace guiapp {
 	        this.totalSeconds = source["totalSeconds"];
 	        this.totalDuration = source["totalDuration"];
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -647,8 +783,8 @@ export namespace guiapp {
 		    return a;
 		}
 	}
-	
-	
+
+
 	export class WorktimeTaskDetailRow {
 	    projectId: number;
 	    projectName: string;
@@ -656,11 +792,11 @@ export namespace guiapp {
 	    taskName: string;
 	    durationSeconds: number;
 	    duration: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new WorktimeTaskDetailRow(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.projectId = source["projectId"];
@@ -676,11 +812,11 @@ export namespace guiapp {
 	    rows: WorktimeTaskDetailRow[];
 	    totalSeconds: number;
 	    totalDuration: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new WorktimeTaskDetailsReport(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.empty = source["empty"];
@@ -688,7 +824,7 @@ export namespace guiapp {
 	        this.totalSeconds = source["totalSeconds"];
 	        this.totalDuration = source["totalDuration"];
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
