@@ -85,6 +85,25 @@ func TestDatabasePathRejectsMissingSelectedPath(t *testing.T) {
 	}
 }
 
+func TestDatabasePathRejectsSelectedDirectory(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HUMBLEBEE_HOME", home)
+
+	app := New()
+	selected := t.TempDir()
+	if err := app.setSelectedDatabasePath(selected); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := app.databasePath()
+	if err == nil {
+		t.Fatal("expected selected directory to fail")
+	}
+	if !strings.Contains(err.Error(), "selected database path is not a file") {
+		t.Fatalf("expected selected directory error, got %v", err)
+	}
+}
+
 func TestClearSelectedDatabasePathReturnsToDefault(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HUMBLEBEE_HOME", home)
