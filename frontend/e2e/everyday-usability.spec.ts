@@ -2,6 +2,27 @@ import { expect, test } from "@playwright/test";
 import { installHumbleBeeMock, mockState } from "./humblebeeMock";
 
 test.describe("everyday usability", () => {
+  test("uses German labels and aligns compact and multiline modal fields", async ({ page }) => {
+    await installHumbleBeeMock(page);
+    await page.goto("/");
+
+    await expect(page.getByRole("heading", { name: "Zeiteinträge" })).toBeVisible();
+    await expect(page.locator('[aria-label="Zeitübersicht"]')).toBeVisible();
+    await page.getByRole("button", { name: "Zeit erfassen" }).click();
+
+    const modal = page.locator(".modal-form");
+    await expect(modal.getByText("Projekt", { exact: true })).toBeVisible();
+    await expect(modal.getByText("Tätigkeit", { exact: true })).toBeVisible();
+    const rows = modal.locator(".tab-form-row");
+    await expect(rows.nth(3)).toHaveCSS("align-items", "center");
+    await expect(rows.nth(4)).toHaveCSS("align-items", "center");
+    await expect(rows.nth(5)).toHaveCSS("align-items", "start");
+
+    await modal.getByRole("button", { name: "×" }).click();
+    await page.goto("/#reports/worktime-by-month");
+    await expect(page.getByRole("option", { name: "März" }).first()).toBeVisible();
+  });
+
   test("prefills and remembers the last successful manual project and task", async ({ page }) => {
     await installHumbleBeeMock(page);
     await page.goto("/");
