@@ -13,7 +13,7 @@
     "test:e2e:ui": "playwright test --ui --project=chromium"
   },
   "dependencies": {
-    "lucide-react": "^1.47.0",
+    "lucide-react": "^1.48.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
