@@ -18,9 +18,8 @@ test.describe("everyday usability", () => {
     await expect(rows.nth(4)).toHaveCSS("align-items", "center");
     await expect(rows.nth(5)).toHaveCSS("align-items", "start");
 
-    await modal.getByRole("button", { name: "×" }).click();
     await page.goto("/#reports/worktime-by-month");
-    await expect(page.getByRole("option", { name: "März" }).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Arbeitszeit pro Monat" })).toBeVisible();
   });
 
   test("prefills and remembers the last successful manual project and task", async ({ page }) => {
