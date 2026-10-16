@@ -36,7 +36,7 @@ jobs:
           persist-credentials: false
 
       - name: Update the website release version
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           RELEASE_TAG: ${{ inputs.tag }}
           WEBSITE_RELEASE_TOKEN: ${{ secrets.WEBSITE_RELEASE_TOKEN }}
