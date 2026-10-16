@@ -74,6 +74,42 @@ HumbleBee uses GitHub Actions for release builds.
 - UI-first release assets are built after the GitHub release is published and attached to the same release as standalone Wails app downloads.
 - SBOM assets are generated and attached to published releases as CycloneDX JSON, for example `HumbleBee_v0.2.1_sbom.cdx.json`.
 
+### Automatic website download links
+
+After all GUI builds succeed, the GUI release workflow waits for the CLI archives,
+checksums, and SBOM. For the latest stable release only, it updates
+`_data/humblebee_release.yml` on `grobmeier/timeandbill-landing`'s `develop` branch.
+That commit triggers the website's existing deployment workflow. Reruns do not
+create duplicate commits or replace a newer website version.
+
+Website download URLs must be pinned to the configured release tag rather than
+`releases/latest/download`, so the previous release stays downloadable while the
+next release's assets are still uploading.
+
+One-time setup: create a fine-grained GitHub personal access token restricted to
+`grobmeier/timeandbill-landing`, with **Contents: read and write**. Store it in
+the HumbleBee repository's Actions secrets as `WEBSITE_RELEASE_TOKEN`. The normal
+workflow token cannot write to another repository; do not reuse a broad personal
+token or the Homebrew/Scoop credentials. A missing or expired token fails the
+website job visibly; release downloads remain available.
+
+To retry after fixing credentials, run the standalone website workflow without
+rebuilding or replacing GUI downloads:
+
+```bash
+gh workflow run update-website-downloads.yml --repo grobmeier/humblebee -f tag=v0.7.1
+```
+
+The job checks release readiness for up to ten minutes and
+fails without changing the website if assets remain missing. Local macOS signing
+can still replace the hosted macOS archive afterward under the same filename.
+
+Validate the publisher without network access or credentials:
+
+```bash
+node --test scripts/update-website-release.test.cjs
+```
+
 ### Signed macOS GUI release
 
 The GitHub GUI workflow keeps producing the macOS app asset, but it is not

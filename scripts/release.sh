@@ -114,9 +114,9 @@ The script will now:
   5. create annotated tag ${tag}
   6. push ${tag} to origin
 
-After the release, remember to update the HumbleBee download buttons on the
-website:
-  timeandbill-landing.git/_data/humblebee_release.yml
+After the GUI downloads and SBOM are uploaded, GitHub Actions updates the
+website download links and triggers the website's deployment automatically.
+This requires the WEBSITE_RELEASE_TOKEN repository secret described in README.md.
 
 EOF
 
@@ -136,7 +136,7 @@ git tag -a "$tag" -m "Release ${tag}"
 git push origin "$tag"
 
 printf 'Release tag %s pushed. GitHub Actions will build and publish the release assets.\n' "$tag"
-printf 'Reminder: update timeandbill-landing.git/_data/humblebee_release.yml to %s for the website download buttons.\n' "$tag"
+printf 'GitHub Actions will update the website download links to %s after all release assets are ready.\n' "$tag"
 
 if [[ "$(uname -s)" == "Darwin" ]]; then
   read -r -p 'Wait for the macOS GUI asset and replace it with a signed/notarized build? [y/N]: ' sign_macos
