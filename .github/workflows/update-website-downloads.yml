@@ -1,0 +1,53 @@
+name: update-website-downloads
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: Stable release tag to publish on the website
+        required: true
+        type: string
+    secrets:
+      WEBSITE_RELEASE_TOKEN:
+        required: true
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Stable release tag to publish on the website
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  update-website:
+    name: Update website downloads
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: humblebee-website-downloads
+      cancel-in-progress: false
+    steps:
+      - name: Checkout automation
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          persist-credentials: false
+
+      - name: Update the website release version
+        uses: actions/github-script@v8
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+          WEBSITE_RELEASE_TOKEN: ${{ secrets.WEBSITE_RELEASE_TOKEN }}
+        with:
+          script: |
+            if (!process.env.WEBSITE_RELEASE_TOKEN) {
+              throw new Error('Configure WEBSITE_RELEASE_TOKEN with Contents read/write access to grobmeier/timeandbill-landing.');
+            }
+            const { updateWebsiteRelease } = require('./scripts/update-website-release.cjs');
+            const website = new github.constructor({ auth: process.env.WEBSITE_RELEASE_TOKEN });
+            const result = await updateWebsiteRelease({
+              source: github, website, tag: process.env.RELEASE_TAG, log: core.info
+            });
+            core.info(result.updated ? `Website commit: ${result.commit}` : result.reason);

@@ -98,3 +98,15 @@ jobs:
         with:
           tag_name: ${{ steps.release.outputs.tag }}
           files: release/${{ steps.release.outputs.asset_name }}
+
+  update-website:
+    name: Update website downloads
+    needs: wails
+    if: github.event_name != 'release' || !github.event.release.prerelease
+    permissions:
+      contents: read
+    uses: ./.github/workflows/update-website-downloads.yml
+    with:
+      tag: ${{ github.event.release.tag_name || inputs.tag }}
+    secrets:
+      WEBSITE_RELEASE_TOKEN: ${{ secrets.WEBSITE_RELEASE_TOKEN }}
