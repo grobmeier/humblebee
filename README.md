@@ -76,64 +76,16 @@ HumbleBee uses GitHub Actions for release builds.
 
 ### Automatic website download links
 
-After all GUI builds succeed, the GUI release workflow waits for the CLI archives,
-checksums, and SBOM. For the latest stable release only, it updates
-`_data/humblebee_release.yml` on `grobmeier/timeandbill-landing`'s `develop` branch.
-That commit triggers the website's existing deployment workflow. Reruns do not
-create duplicate commits or replace a newer website version.
-
-Website download URLs must be pinned to the configured release tag rather than
-`releases/latest/download`, so the previous release stays downloadable while the
-next release's assets are still uploading.
-
-One-time setup: create a fine-grained GitHub personal access token restricted to
-`grobmeier/timeandbill-landing`, with **Contents: read and write**. Store it in
-the HumbleBee repository's Actions secrets as `WEBSITE_RELEASE_TOKEN`. The normal
-workflow token cannot write to another repository; do not reuse a broad personal
-token or the Homebrew/Scoop credentials. A missing or expired token fails the
-website job visibly; release downloads remain available.
-
-To retry after fixing credentials, run the standalone website workflow without
-rebuilding or replacing GUI downloads:
-
-```bash
-gh workflow run update-website-downloads.yml --repo grobmeier/humblebee -f tag=v0.7.1
-```
-
-The job checks release readiness for up to ten minutes and
-fails without changing the website if assets remain missing. Local macOS signing
-can still replace the hosted macOS archive afterward under the same filename.
-
-Validate the publisher without network access or credentials:
-
-```bash
-node --test scripts/update-website-release.test.cjs
-```
+The GUI release workflow waits for all release assets, then updates the website
+for the latest stable version and triggers its deployment. Setup, verification
+and standalone retries are documented in the [release runbook](RELEASE.md).
 
 ### Signed macOS GUI release
 
-The GitHub GUI workflow keeps producing the macOS app asset, but it is not
-signed or notarized there so GitHub-hosted macOS runner minutes stay limited.
-For a trusted macOS download, build and replace the macOS release asset locally
-from a Mac that has a Developer ID Application certificate installed:
-
-```bash
-xcrun notarytool store-credentials humblebee-notary
-scripts/release-macos-app.sh v0.2.1 --no-upload
-scripts/release-macos-app.sh v0.2.1
-```
-
-The first command stores Apple notarization credentials in the local keychain.
-The `--no-upload` run verifies the local build/sign/notarization flow. The
-helper asks which git ref to build and defaults to `origin/main`. The final run
-uploads the signed and notarized app to the existing GitHub release using the
-same asset name, for example `HumbleBee_GUI_v0.2.1_darwin_arm64.zip`.
-
-When creating a new release with `scripts/release.sh` from macOS, the release
-script can wait for the unsigned GitHub GUI asset and then replace it with this
-local signed and notarized build.
-
-See `GUI.md` for the detailed GUI release notes.
+The hosted macOS archive is replaced locally with a Developer ID signed and
+notarized app built from the exact release tag. Follow [RELEASE.md](RELEASE.md)
+for the signing setup and complete maintainer checklist. See [GUI.md](GUI.md)
+for GUI development and native testing.
 
 ### Doctor (health check / safe repair)
 
