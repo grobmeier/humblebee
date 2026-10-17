@@ -109,3 +109,6 @@ Do not open public issues for suspected vulnerabilities. Use the reporting proce
 ## Releases
 
 Releases are built by GitHub Actions from `v*` tags. The release process publishes CLI archives, GUI assets, checksums, and a CycloneDX SBOM.
+
+Maintainers should follow [RELEASE.md](RELEASE.md) for the full process, including
+macOS signing, automatic website updates, user-facing notes and recovery.

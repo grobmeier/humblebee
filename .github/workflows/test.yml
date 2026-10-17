@@ -65,7 +65,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, windows-latest]
+        os: [ubuntu-22.04, windows-latest, macos-15]
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -94,3 +94,9 @@ jobs:
 
       - name: Build GUI
         run: go run github.com/wailsapp/wails/v2/cmd/wails@v2.16.0 build -clean -tags production
+
+      - name: Verify and package macOS ARM64 GUI
+        if: runner.os == 'macOS'
+        run: |
+          lipo build/bin/HumbleBee.app/Contents/MacOS/HumbleBee -verify_arch arm64
+          ditto -c -k --sequesterRsrc --keepParent build/bin/HumbleBee.app "$RUNNER_TEMP/HumbleBee_GUI_ci_darwin_arm64.zip"
