@@ -12,6 +12,9 @@ Follow the workspace instructions as well as this repository guidance.
 - Keep Wails CLI and module versions aligned. Native builds may generate binding
   whitespace, dependency fingerprints and platform files; inspect the diff and
   preserve unrelated user changes rather than committing build churn.
+- Keep macOS CI and release jobs on the same supported ARM64 runner label.
+  Validate image migrations with build-only CI, including architecture and app
+  packaging checks, rather than publishing or replacing release assets.
 - Build signed macOS replacements from the exact release tag, not a newer main.
   Never rerun GUI packaging merely to test website publishing: it can replace a
   signed/notarized archive. Use `update-website-downloads.yml` for that purpose.

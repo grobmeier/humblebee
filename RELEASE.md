@@ -22,6 +22,13 @@ and SBOM workflows also accept a manually published release event.
 CLI downloads contain the CLI; `humblebee gui` launches an available GUI app.
 Standalone GUI downloads do not require a separate CLI installation.
 
+The macOS release and CI jobs use the standard ARM64 `macos-15` runner. Keep
+their labels aligned when migrating images; `macos-latest` can change OS versions.
+The retired `macos-14` image must not be used. See the
+[GitHub retirement notice](https://github.blog/changelog/2026-10-01-github-actions-macos-14-runner-image-retirement/).
+CI builds and packages the ARM64 app without uploading release assets; local
+Developer ID signing remains a separate step.
+
 ## One-Time Setup
 
 Configure these Actions secrets in `grobmeier/humblebee`:
@@ -56,7 +63,7 @@ xcrun notarytool store-credentials humblebee-notary
 1. Obtain release approval and choose the next version from the latest published
    release. Use a patch version for compatible fixes and maintenance.
 2. Confirm the intended changes are merged and pushed to `main`, the working tree
-   is clean, and CI is green, including Windows/Linux GUI builds. Use the Go
+   is clean, and CI is green, including macOS/Windows/Linux GUI builds. Use the Go
    version in `go.mod` and keep the Wails CLI aligned with the module dependency.
 3. Install the locked frontend dependencies and validate the publisher:
 
