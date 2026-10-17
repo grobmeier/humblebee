@@ -98,5 +98,5 @@ jobs:
       - name: Verify and package macOS ARM64 GUI
         if: runner.os == 'macOS'
         run: |
-          lipo -verify_arch arm64 build/bin/HumbleBee.app/Contents/MacOS/HumbleBee
+          lipo build/bin/HumbleBee.app/Contents/MacOS/HumbleBee -verify_arch arm64
           ditto -c -k --sequesterRsrc --keepParent build/bin/HumbleBee.app "$RUNNER_TEMP/HumbleBee_GUI_ci_darwin_arm64.zip"
