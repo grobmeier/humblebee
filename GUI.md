@@ -58,33 +58,18 @@ and packaged Wails applications still need platform acceptance testing.
 
 ## Release Builds
 
-GUI release assets are built by `.github/workflows/release-gui.yml` after a GitHub release is published. The CLI release remains GoReleaser-based; the GUI workflow attaches standalone Wails app downloads to the same `v*` release.
+The GUI workflow attaches standalone Wails downloads to the same release as the
+GoReleaser CLI archives. Names include the GUI marker and tag, for example
+`HumbleBee_GUI_v0.7.1_darwin_arm64.zip`. The GUI does not require a CLI installation.
 
-Release asset names include both the GUI marker and release tag, for example `HumbleBee_GUI_v0.2.1_darwin_arm64.zip`.
+Use [RELEASE.md](RELEASE.md) for release approval, tagging, local macOS signing
+from the exact tag, automated website updates, asset verification and recovery.
+The hosted macOS archive is not Developer ID signed/notarized; verify the local
+signed replacement separately. Retrying website publishing must use its
+standalone workflow so it does not overwrite that replacement.
 
-### Signed macOS App
-
-The GitHub workflow still builds an unsigned macOS GUI asset. To replace it with
-a signed and notarized app without spending GitHub-hosted macOS runner minutes,
-run the local macOS release helper from a Mac with the Apple Developer tools
-configured:
-
-```bash
-xcrun notarytool store-credentials humblebee-notary
-scripts/release-macos-app.sh v0.2.1
-```
-
-The script asks which git ref to build and defaults to `origin/main`. It builds
-the Wails app in a temporary worktree, signs it with a local Developer ID
-Application certificate, notarizes and staples it, then uploads the same release
-asset name with `gh release upload --clobber`. Use `--no-upload` to test the
-local build/sign/notarization flow without replacing the GitHub release asset.
-
-When running `scripts/release.sh` on macOS, the release script offers to wait
-for the unsigned GitHub GUI asset and replace it with the local signed and
-notarized build.
-
-The CLI command `humblebee gui` launches an installed GUI app if one is available next to the CLI, on `PATH`, or via `HUMBLEBEE_GUI_PATH`.
+The CLI command `humblebee gui` launches an installed GUI app if one is available
+next to the CLI, on `PATH`, or via `HUMBLEBEE_GUI_PATH`.
 
 ## Notes
 

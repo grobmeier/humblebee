@@ -41,7 +41,11 @@ Timelines may vary for volunteer-maintained releases, but severe issues that can
 
 Security updates are distributed through normal HumbleBee releases. Users should install the newest release from GitHub Releases, Homebrew, or Scoop.
 
-Release artifacts include checksums. GitHub Actions also generates a machine-readable CycloneDX SBOM for dependency review and release evidence. Published releases include the SBOM as a versioned release asset, for example `HumbleBee_v0.2.1_sbom.cdx.json`.
+CLI release archives include `checksums.txt`; it does not cover the separately
+uploaded GUI archives. GitHub Actions also generates a machine-readable CycloneDX
+SBOM for dependency review and release evidence. Published releases include the
+SBOM as a versioned release asset, for example `HumbleBee_v0.7.1_sbom.cdx.json`.
+See [RELEASE.md](RELEASE.md) for asset and macOS signing verification.
 
 ## Scope
 
