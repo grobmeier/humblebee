@@ -126,6 +126,12 @@ func (c *Client) call(ctx context.Context, tool string, args any, out any) error
 		return Failure("client.invalid_response", "Time & Bill returned an invalid protocol response.", 5)
 	}
 	if len(envelope.Error) > 0 && string(envelope.Error) != "null" {
+		var rpc struct {
+			Code int `json:"code"`
+		}
+		if json.Unmarshal(envelope.Error, &rpc) == nil && (rpc.Code == -32601 || rpc.Code == -32602) {
+			return Failure("client.incompatible", "Time & Bill does not support the required remote operation.", 7)
+		}
 		return Failure("client.rpc_error", "Time & Bill could not process the remote request.", 5)
 	}
 	if envelope.Result == nil || envelope.Result.IsError == nil || len(envelope.Result.Content) == 0 || string(envelope.Result.Content) == "null" {

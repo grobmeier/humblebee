@@ -158,6 +158,17 @@ func TestServerCannotReflectCredentialIntoDiagnosticsOrIdentity(t *testing.T) {
 	}
 }
 
+func TestMissingCapabilitiesToolIsAnIncompatibleServer(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = fmt.Fprint(w, `{"jsonrpc":"2.0","id":1,"error":{"code":-32601,"message":"Unknown tool"}}`)
+	}))
+	defer server.Close()
+	client, _ := NewClient(server.URL, "fixture-token", Options{AllowLoopbackHTTP: true})
+	if _, err := client.Capabilities(context.Background()); ExitCode(err) != 7 {
+		t.Fatalf("old server not classified as incompatible: %v", err)
+	}
+}
+
 func capabilityFixture() map[string]any {
 	return map[string]any{"contractVersion": 1, "accountIdentity": "user:fixture", "timezone": "Europe/Berlin",
 		"scopes":        []string{"mcp:read:projects", "mcp:read:time", "mcp:read:stopwatch", "mcp:write:time", "mcp:write:stopwatch"},
