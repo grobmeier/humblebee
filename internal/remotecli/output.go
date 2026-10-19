@@ -82,6 +82,25 @@ func printResult(cmd *cobra.Command, asJSON bool, profile connected.Profile, dat
 		}
 	case map[string]string:
 		fmt.Fprintln(&text, safeText(v["message"]))
+	case connected.WriteResult:
+		fmt.Fprintf(&text, "Applied %s | Mutation: %s\n", safeText(v.Mutation.Operation), v.Mutation.ID)
+		if v.Entry != nil {
+			fmt.Fprintf(&text, "Time entry: %s | Duration: %s\n", v.Entry.UUID, formatDuration(v.Entry.DurationMS))
+		}
+		if v.Stopwatch != nil {
+			fmt.Fprintf(&text, "Stopwatch: %d | Duration: %s\n", v.Stopwatch.ID, formatDuration(v.Stopwatch.DurationMS))
+		}
+		if v.StopwatchID > 0 {
+			fmt.Fprintf(&text, "Discarded stopwatch: %d (no time booked)\n", v.StopwatchID)
+		}
+	case connected.Mutation:
+		fmt.Fprintf(&text, "Mutation: %s | State: %s | Operation: %s\n", v.ID, safeText(v.State), safeText(v.Operation))
+		if v.Resources.TimeUUID != "" {
+			fmt.Fprintf(&text, "Time entry: %s\n", v.Resources.TimeUUID)
+		}
+		if v.Resources.StopwatchID > 0 {
+			fmt.Fprintf(&text, "Stopwatch: %d\n", v.Resources.StopwatchID)
+		}
 	default:
 		return connected.Failure("client.output", "Unsupported remote output.", 5)
 	}
@@ -115,6 +134,14 @@ func ReportError(cmd *cobra.Command, err error) error {
 		_ = json.NewEncoder(cmd.OutOrStdout()).Encode(map[string]any{"version": 1, "ok": false, "error": problem})
 	} else {
 		fmt.Fprintf(cmd.ErrOrStderr(), "%s (%s)\n", safeText(problem.Message), problem.Code)
+		if problem.MutationID != "" {
+			profile, _ := cmd.Flags().GetString("profile")
+			profileFlag := ""
+			if profile != "" {
+				profileFlag = " --profile " + safeText(profile)
+			}
+			fmt.Fprintf(cmd.ErrOrStderr(), "Mutation: %s\nRecover: humblebee remote operation%s %s\n", problem.MutationID, profileFlag, problem.MutationID)
+		}
 	}
 	return problem
 }

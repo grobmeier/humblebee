@@ -85,6 +85,7 @@ func NewCommand(options Options) *cobra.Command {
 	root.AddCommand(state.readCommand("stopwatches", func(ctx context.Context, s *connected.Session, _ *cobra.Command) (any, error) {
 		return s.Client.Stopwatches(ctx)
 	}))
+	root.AddCommand(state.bookCommand(), state.startCommand(), state.stopCommand(), state.discardCommand(), state.operationCommand())
 	return root
 }
 
