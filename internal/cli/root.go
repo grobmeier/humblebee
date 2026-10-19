@@ -60,7 +60,7 @@ func Execute() error {
 	command, err := rootCmd.ExecuteC()
 	if err != nil {
 		if remotecli.IsRemote(command) {
-			return remotecli.ReportError(command, err)
+			return remotecli.ReportError(command, err, os.Args[1:]...)
 		}
 		ui.PrintError(cliErrorMessage(err))
 		return err

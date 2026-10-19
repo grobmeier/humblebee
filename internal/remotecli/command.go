@@ -50,6 +50,8 @@ func NewCommand(options Options) *cobra.Command {
 	}
 	state := &commandState{options: options}
 	root := &cobra.Command{Use: "remote", Short: "Use an online Time & Bill account without changing local data", SilenceErrors: true, SilenceUsage: true}
+	root.Args = noArgs
+	root.RunE = func(cmd *cobra.Command, _ []string) error { return cmd.Help() }
 	root.PersistentFlags().StringVar(&state.profile, "profile", "", "Named remote profile")
 	root.PersistentFlags().BoolVar(&state.json, "json", false, "Print one versioned JSON result")
 	root.SetFlagErrorFunc(func(*cobra.Command, error) error { return invalidArguments() })

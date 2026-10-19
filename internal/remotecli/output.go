@@ -124,12 +124,31 @@ func IsRemote(cmd *cobra.Command) bool {
 }
 
 // ReportError is called once at the executable boundary, including parser errors.
-func ReportError(cmd *cobra.Command, err error) error {
+func ReportError(cmd *cobra.Command, err error, rawArgs ...string) error {
 	var problem *connected.Error
 	if !errors.As(err, &problem) {
 		problem = connected.Failure("client.invalid_arguments", "Remote command failed. Check its arguments and --help.", 2)
 	}
 	asJSON, _ := cmd.Flags().GetBool("json")
+	for i := 0; i < len(rawArgs); i++ {
+		arg := rawArgs[i]
+		if arg == "--" {
+			break
+		}
+		if arg == "--json" || arg == "--json=true" {
+			asJSON = true
+			break
+		}
+		if strings.HasPrefix(arg, "--") && !strings.Contains(arg, "=") {
+			flag := cmd.Flags().Lookup(strings.TrimPrefix(arg, "--"))
+			if flag == nil {
+				flag = cmd.InheritedFlags().Lookup(strings.TrimPrefix(arg, "--"))
+			}
+			if flag != nil && flag.NoOptDefVal == "" {
+				i++
+			}
+		}
+	}
 	if asJSON {
 		_ = json.NewEncoder(cmd.OutOrStdout()).Encode(map[string]any{"version": 1, "ok": false, "error": problem})
 	} else {
