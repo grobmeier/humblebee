@@ -17,6 +17,7 @@ package connected
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -27,9 +28,15 @@ import (
 
 type fixtureCredentials map[string]string
 
-func (f fixtureCredentials) Get(ref string) (string, error) { return f[ref], nil }
-func (f fixtureCredentials) Set(ref, token string) error    { f[ref] = token; return nil }
-func (f fixtureCredentials) Delete(ref string) error        { delete(f, ref); return nil }
+func (f fixtureCredentials) Get(ref string) (string, error) {
+	value, ok := f[ref]
+	if !ok {
+		return "", errors.New("fixture credential not found")
+	}
+	return value, nil
+}
+func (f fixtureCredentials) Set(ref, token string) error { f[ref] = token; return nil }
+func (f fixtureCredentials) Delete(ref string) error     { delete(f, ref); return nil }
 
 func capabilityServer(t *testing.T, account *string) *httptest.Server {
 	t.Helper()
@@ -58,7 +65,7 @@ func TestProfilesKeepTokensOutOfFilesAndRejectAccountChanges(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(secrets) != 1 || secrets[profile.CredentialRef] != "private-fixture-token" {
+	if len(secrets) != 1 || profile.CredentialRef == "" {
 		t.Fatal("missing bound credential")
 	}
 	data, err := os.ReadFile(filepath.Join(dir, "profiles.json"))
@@ -80,6 +87,46 @@ func TestProfilesKeepTokensOutOfFilesAndRejectAccountChanges(t *testing.T) {
 	}
 	if len(secrets) != 0 {
 		t.Fatal("credential retained after disconnect")
+	}
+}
+
+func TestEditedProfileCannotForwardStoredCredentialToAnotherOrigin(t *testing.T) {
+	account := "user:fixture"
+	original := capabilityServer(t, &account)
+	defer original.Close()
+	forwarded := 0
+	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		forwarded++
+		caps := capabilityFixture()
+		var request struct {
+			ID int `json:"id"`
+		}
+		_ = json.NewDecoder(r.Body).Decode(&request)
+		_ = json.NewEncoder(w).Encode(map[string]any{"jsonrpc": "2.0", "id": request.ID, "result": map[string]any{"isError": false, "structuredContent": caps}})
+	}))
+	defer target.Close()
+	dir := t.TempDir()
+	store := NewStore(dir, fixtureCredentials{})
+	if _, err := store.Connect(context.Background(), "work", original.URL, "fixture-token", false, false, Options{AllowLoopbackHTTP: true}); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "profiles.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var file map[string]any
+	if json.Unmarshal(data, &file) != nil {
+		t.Fatal("invalid profile file")
+	}
+	file["profiles"].(map[string]any)["work"].(map[string]any)["origin"] = target.URL
+	data, _ = json.Marshal(file)
+	if err := os.WriteFile(path, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	_, err = store.Open(context.Background(), "work", "", Options{})
+	if ExitCode(err) != 3 || forwarded != 0 {
+		t.Fatalf("stored credential crossed origin binding: err=%v forwarded=%d", err, forwarded)
 	}
 }
 

@@ -16,6 +16,8 @@ package connected
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io"
@@ -58,6 +60,12 @@ type profileFile struct {
 }
 
 var profileName = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$`)
+
+func credentialKey(p Profile) string {
+	data, _ := json.Marshal([]string{p.Name, p.Origin, p.AccountIdentity, p.CredentialRef})
+	digest := sha256.Sum256(data)
+	return hex.EncodeToString(digest[:])
+}
 
 func NewStore(dir string, credentials Credentials) *Store {
 	return &Store{dir: dir, credentials: credentials}
@@ -152,19 +160,19 @@ func (s *Store) Connect(ctx context.Context, name, origin, token string, ephemer
 	p := Profile{Name: name, Origin: client.origin, AccountIdentity: caps.AccountIdentity, Timezone: caps.Timezone, AllowLoopbackHTTP: options.AllowLoopbackHTTP}
 	if !ephemeral {
 		p.CredentialRef = uuid.NewString()
-		if s.credentials == nil || s.credentials.Set(p.CredentialRef, token) != nil {
+		if s.credentials == nil || s.credentials.Set(credentialKey(p), token) != nil {
 			return Profile{}, Failure("client.keyring_unavailable", "Cannot use secure credential storage. Use HUMBLEBEE_TAB_TOKEN with --ephemeral instead; no token was saved in a file.", 3)
 		}
 	}
 	file.Profiles[name] = p
 	if err := writePrivateJSON(filepath.Join(s.dir, "profiles.json"), file); err != nil {
 		if p.CredentialRef != "" {
-			_ = s.credentials.Delete(p.CredentialRef)
+			_ = s.credentials.Delete(credentialKey(p))
 		}
 		return Profile{}, err
 	}
 	if exists && old.CredentialRef != "" && s.credentials != nil {
-		if s.credentials.Delete(old.CredentialRef) != nil {
+		if s.credentials.Delete(credentialKey(old)) != nil {
 			return p, Failure("client.credential_cleanup", "Profile replaced, but the old credential could not be removed from secure storage.", 5)
 		}
 	}
@@ -198,7 +206,7 @@ func (s *Store) Open(ctx context.Context, name, override string, options Options
 		if p.CredentialRef == "" || s.credentials == nil {
 			return nil, Failure("client.token_required", "Provide HUMBLEBEE_TAB_TOKEN for this ephemeral profile.", 3)
 		}
-		token, err = s.credentials.Get(p.CredentialRef)
+		token, err = s.credentials.Get(credentialKey(p))
 		if err != nil {
 			return nil, Failure("client.keyring_unavailable", "Cannot read the app token from secure credential storage.", 3)
 		}
@@ -233,7 +241,7 @@ func (s *Store) Disconnect(name string) error {
 	if err != nil {
 		return err
 	}
-	if p.CredentialRef != "" && (s.credentials == nil || s.credentials.Delete(p.CredentialRef) != nil) {
+	if p.CredentialRef != "" && (s.credentials == nil || s.credentials.Delete(credentialKey(p)) != nil) {
 		return Failure("client.keyring_unavailable", "Cannot remove the stored credential; profile retained so you can retry.", 3)
 	}
 	delete(file.Profiles, p.Name)
