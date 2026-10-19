@@ -19,6 +19,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/grobmeier/humblebee/internal/connected"
 	"github.com/grobmeier/humblebee/internal/db"
 )
 
@@ -38,6 +39,18 @@ func TestCLIErrorMessageFormatsBusyError(t *testing.T) {
 	}
 	if strings.Contains(message, db.BusyErrorCode) {
 		t.Fatalf("expected user-facing message without internal error code, got %q", message)
+	}
+}
+
+func TestExitCodePreservesLocalErrorsAndRemoteClassifications(t *testing.T) {
+	if got := ExitCode(errors.New("local failure")); got != 1 {
+		t.Fatalf("local exit: %d", got)
+	}
+	if got := ExitCode(connected.Failure("client.incompatible", "Incompatible server.", 7)); got != 7 {
+		t.Fatalf("remote exit: %d", got)
+	}
+	if got := ExitCode(nil); got != 0 {
+		t.Fatalf("success exit: %d", got)
 	}
 }
 

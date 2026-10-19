@@ -33,6 +33,6 @@ func main() {
 		Date:    date,
 	})
 	if err := cli.Execute(); err != nil {
-		os.Exit(1)
+		os.Exit(cli.ExitCode(err))
 	}
 }

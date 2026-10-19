@@ -18,7 +18,9 @@ import (
 	"errors"
 	"os"
 
+	"github.com/grobmeier/humblebee/internal/connected"
 	"github.com/grobmeier/humblebee/internal/db"
+	"github.com/grobmeier/humblebee/internal/remotecli"
 	"github.com/grobmeier/humblebee/internal/ui"
 	"github.com/spf13/cobra"
 )
@@ -53,12 +55,29 @@ func Execute() error {
 	rootCmd.AddCommand(stopCmd)
 	rootCmd.AddCommand(reportCmd)
 	rootCmd.AddCommand(importCmd)
+	rootCmd.AddCommand(remotecli.NewCommand(remotecli.Options{}))
 
-	if err := rootCmd.Execute(); err != nil {
+	command, err := rootCmd.ExecuteC()
+	if err != nil {
+		if remotecli.IsRemote(command) {
+			return remotecli.ReportError(command, err)
+		}
 		ui.PrintError(cliErrorMessage(err))
 		return err
 	}
 	return nil
+}
+
+// ExitCode keeps legacy CLI failures at 1 and preserves remote scripting codes.
+func ExitCode(err error) int {
+	if err == nil {
+		return 0
+	}
+	var remote *connected.Error
+	if errors.As(err, &remote) {
+		return remote.Exit
+	}
+	return 1
 }
 
 func cliErrorMessage(err error) string {
