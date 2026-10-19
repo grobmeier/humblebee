@@ -47,7 +47,7 @@ func TestBookingRecordsRecoveryIDBeforeDispatchWithoutNotePayload(t *testing.T) 
 			t.Error("payload persisted")
 		}
 		return map[string]any{"entry": map[string]any{"uuid": fixtureEntry, "projectUuid": fixtureProject, "taskUuid": fixtureTask,
-			"startAtTs": 1773478800, "endAtTs": 1773482400, "durationMs": 3600000, "description": note},
+			"startAtTs": 1773475200, "endAtTs": 1773478800, "durationMs": 3600000, "description": note},
 			"mutation": map[string]any{"id": mutationID, "operation": tool, "state": "applied", "expiresAtTs": 1774000000,
 				"resources": map[string]any{"timeUuid": fixtureEntry}}}
 	})
@@ -70,6 +70,10 @@ func TestBookingRecordsRecoveryIDBeforeDispatchWithoutNotePayload(t *testing.T) 
 	var attempt map[string]any
 	if json.Unmarshal(data, &attempt) != nil || attempt["state"] != "applied" || strings.Contains(string(data), "private note") {
 		t.Fatalf("unsafe recovery metadata: %s", data)
+	}
+	session.Profile.AccountIdentity = "user:other"
+	if _, err := session.Operation(context.Background(), store, mutationID); ExitCode(err) != 3 {
+		t.Fatalf("recovery metadata crossed an account binding: %v", err)
 	}
 }
 
@@ -138,5 +142,20 @@ func TestCancelledBeforeDispatchDoesNotCreateAWriteAttempt(t *testing.T) {
 	files, err := os.ReadDir(dir)
 	if err != nil || len(files) != 0 {
 		t.Fatalf("unsent request created recovery state: %v %v", files, err)
+	}
+}
+
+func TestBookingDoesNotConfirmADifferentServerInterval(t *testing.T) {
+	server := toolServer(t, func(tool string, args map[string]any) any {
+		return map[string]any{"entry": map[string]any{"uuid": fixtureEntry, "projectUuid": fixtureProject, "taskUuid": fixtureTask,
+			"startAtTs": 1773475200, "endAtTs": 1773482400, "durationMs": 7200000},
+			"mutation": map[string]any{"id": args["clientMutationId"], "operation": tool, "state": "applied", "expiresAtTs": 1774000000, "resources": map[string]any{"timeUuid": fixtureEntry}}}
+	})
+	defer server.Close()
+	client, _ := NewClient(server.URL, "fixture-token", Options{AllowLoopbackHTTP: true})
+	session := &Session{Profile: Profile{Name: "work", Origin: server.URL, AccountIdentity: "user:fixture", Timezone: "Europe/Berlin"}, Client: client, Capabilities: Capabilities{Scopes: []string{"mcp:write:time"}}}
+	_, err := session.Book(context.Background(), NewStore(t.TempDir(), nil), Booking{ProjectUUID: fixtureProject, TaskUUID: fixtureTask, Date: "2026-03-14", Start: "09:00", End: "10:00"})
+	if ExitCode(err) != 6 {
+		t.Fatalf("unexpected interval was confirmed: %v", err)
 	}
 }

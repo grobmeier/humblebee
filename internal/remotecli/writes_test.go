@@ -54,7 +54,7 @@ func TestRemoteBookUsesExplicitIDsAndVersionedJSON(t *testing.T) {
 			if request.Params.Name != "save_time_entry" || args["projectUuid"] != project || args["taskUuid"] != task || args["complete"] != nil {
 				t.Error("unexpected booking intent")
 			}
-			body = map[string]any{"entry": map[string]any{"uuid": entry, "projectUuid": project, "taskUuid": task, "startAtTs": 1773478800, "endAtTs": 1773482400, "durationMs": 3600000, "description": note},
+			body = map[string]any{"entry": map[string]any{"uuid": entry, "projectUuid": project, "taskUuid": task, "startAtTs": 1773475200, "endAtTs": 1773478800, "durationMs": 3600000, "description": note},
 				"mutation": map[string]any{"id": args["clientMutationId"], "operation": "save_time_entry", "state": "applied", "expiresAtTs": 1774000000, "resources": map[string]any{"timeUuid": entry}}}
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{"jsonrpc": "2.0", "id": request.ID, "result": map[string]any{"isError": false, "structuredContent": body}})

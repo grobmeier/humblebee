@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/grobmeier/humblebee/internal/connected"
 )
@@ -74,5 +75,42 @@ func TestRemoteStatusUsesProfileWithoutTouchingLocalDatabase(t *testing.T) {
 	data, err := os.ReadFile(dbPath)
 	if err != nil || !bytes.Equal(data, original) {
 		t.Fatal("remote command touched local database")
+	}
+}
+
+func TestRemoteDayDefaultsToAccountDateRatherThanClockLocation(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var request struct {
+			ID     int `json:"id"`
+			Params struct {
+				Name      string         `json:"name"`
+				Arguments map[string]any `json:"arguments"`
+			} `json:"params"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			t.Error(err)
+			return
+		}
+		var body any
+		if request.Params.Name == "get_client_capabilities" {
+			body = map[string]any{"contractVersion": 1, "accountIdentity": "user:fixture", "timezone": "Europe/Berlin", "scopes": []string{"mcp:read:time"}, "timestampUnit": "seconds", "durationUnit": "milliseconds", "mutationRecovery": true, "conditionalStopwatches": true, "recoveryWindowSeconds": 604800}
+		} else {
+			if request.Params.Name != "get_time_day" || request.Params.Arguments["date"] != "2026-10-20" {
+				t.Error("used computer clock date instead of account date")
+			}
+			body = map[string]any{"totalDurationMs": 0, "entries": []any{}}
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{"jsonrpc": "2.0", "id": request.ID, "result": map[string]any{"isError": false, "structuredContent": body}})
+	}))
+	defer server.Close()
+	store := connected.NewStore(filepath.Join(t.TempDir(), "remote"), nil)
+	if _, err := store.Connect(context.Background(), "work", server.URL, "fixture-token", true, false, connected.Options{AllowLoopbackHTTP: true}); err != nil {
+		t.Fatal(err)
+	}
+	cmd := NewCommand(Options{Store: store, Token: func() string { return "fixture-token" }, Now: func() time.Time { return time.Date(2026, 10, 19, 22, 30, 0, 0, time.UTC) }})
+	cmd.SetOut(&bytes.Buffer{})
+	cmd.SetArgs([]string{"day", "--profile", "work", "--json"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
 	}
 }

@@ -73,8 +73,23 @@ func (s *Session) Book(ctx context.Context, store *Store, booking Booking) (Writ
 	}
 	return s.mutate(ctx, store, "save_time_entry", map[string]any{"projectUuid": booking.ProjectUUID, "taskUuid": booking.TaskUUID,
 		"startDate": booking.Date, "startTime": booking.Start, "endTime": booking.End, "description": booking.Note}, func(result WriteResult) bool {
-		return result.Entry != nil && result.Entry.valid() && result.Entry.ProjectUUID == booking.ProjectUUID && result.Entry.TaskUUID == booking.TaskUUID && result.Mutation.Resources.TimeUUID == result.Entry.UUID
+		return result.Entry != nil && result.Entry.valid() && booking.matches(*result.Entry, s.Profile.Timezone) && result.Entry.ProjectUUID == booking.ProjectUUID && result.Entry.TaskUUID == booking.TaskUUID && result.Mutation.Resources.TimeUUID == result.Entry.UUID
 	})
+}
+
+func (b Booking) matches(entry Entry, timezone string) bool {
+	zone, err := time.LoadLocation(timezone)
+	if err != nil || timezone == "" {
+		return false
+	}
+	endDate, endClock := b.Date, b.End
+	if b.End == "24:00" {
+		date, _ := time.Parse("2006-01-02", b.Date)
+		endDate = date.AddDate(0, 0, 1).Format("2006-01-02")
+		endClock = "00:00"
+	}
+	return time.Unix(entry.StartAtTS, 0).In(zone).Format("2006-01-02 15:04:05") == b.Date+" "+b.Start+":00" &&
+		time.Unix(entry.EndAtTS, 0).In(zone).Format("2006-01-02 15:04:05") == endDate+" "+endClock+":00"
 }
 
 func uncertain(id string) *Error {
