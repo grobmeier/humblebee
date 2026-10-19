@@ -14,7 +14,10 @@
 
 package connected
 
-import "errors"
+import (
+	"errors"
+	"strings"
+)
 
 // Error is a safe diagnostic. Raw HTTP errors and server text may contain secrets.
 type Error struct {
@@ -45,12 +48,14 @@ func ExitCode(err error) int {
 func remoteError(code string) *Error {
 	exit := 5
 	switch {
-	case code == "mcp.scope_required", code == "auth.subscription_required", code == "time.subscription_required":
+	case code == "mcp.scope_required", strings.HasSuffix(code, ".subscription_required"), strings.HasSuffix(code, ".forbidden"):
 		exit = 3
 	case code == "client.mutation_expired", code == "client.mutation_mismatch":
 		exit = 4
-	case code == "time.conflict", code == "time.booking_closed", code == "stopwatch.stale_state", code == "stopwatch.another_running":
+	case code == "time.conflict", code == "time.booking_closed", code == "stopwatch.stale_state", code == "stopwatch.another_running", code == "projects.task_unavailable":
 		exit = 4
+	case strings.HasPrefix(code, "time.invalid_"), code == "time.ambiguous_local_time", code == "time.nonexistent_local_time", code == "time.multi_day_unsupported":
+		exit = 2
 	}
 	return Failure(code, "Time & Bill rejected the operation. Check permissions and refresh the remote state.", exit)
 }
