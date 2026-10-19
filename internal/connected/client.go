@@ -22,12 +22,15 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"sync/atomic"
 	"time"
 )
 
 const maxResponseBytes = 2 << 20
+
+var bearerToken = regexp.MustCompile(`^[A-Za-z0-9._~+/-]+=*$`)
 
 type Options struct {
 	AllowLoopbackHTTP bool
@@ -64,14 +67,14 @@ func NewClient(origin, token string, options Options) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	if strings.TrimSpace(token) == "" || strings.ContainsAny(token, "\r\n") {
+	if len(token) > 4096 || !bearerToken.MatchString(token) {
 		return nil, Failure("client.token_required", "An app token is required.", 3)
 	}
 	h := &http.Client{Timeout: 15 * time.Second}
 	if options.HTTPClient != nil {
 		*h = *options.HTTPClient
 	}
-	if h.Timeout == 0 || h.Timeout > 15*time.Second {
+	if h.Timeout <= 0 || h.Timeout > 15*time.Second {
 		h.Timeout = 15 * time.Second
 	}
 	h.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
@@ -144,7 +147,7 @@ func (c *Client) call(ctx context.Context, tool string, args any, out any) error
 		if code == "" {
 			code = problem.Code
 		}
-		if !safeCode(code) {
+		if !safeCode(code) || strings.Contains(code, c.token) {
 			code = "client.remote_error"
 		}
 		failure := remoteError(code)
@@ -155,6 +158,11 @@ func (c *Client) call(ctx context.Context, tool string, args any, out any) error
 		return Failure("client.invalid_response", "Time & Bill returned invalid tool data.", 5)
 	}
 	return nil
+}
+
+// RedactText is applied only at display boundaries, not to stored user notes.
+func (c *Client) RedactText(text string) string {
+	return strings.ReplaceAll(text, c.token, "[redacted]")
 }
 
 func safeCode(value string) bool {

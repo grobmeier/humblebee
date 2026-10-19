@@ -135,7 +135,7 @@ func (s *commandState) readCommand(name string, read func(context.Context, *conn
 		if err != nil {
 			return err
 		}
-		return printResult(cmd, s.json, session.Profile, data)
+		return printResult(cmd, s.json, session.Profile, data, session.Client.RedactText)
 	}}
 }
 

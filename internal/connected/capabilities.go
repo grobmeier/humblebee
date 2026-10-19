@@ -16,8 +16,10 @@ package connected
 
 import (
 	"context"
+	"strings"
 	"time"
 	_ "time/tzdata"
+	"unicode"
 )
 
 type Capabilities struct {
@@ -38,9 +40,20 @@ func (c *Client) Capabilities(ctx context.Context) (Capabilities, error) {
 		return caps, err
 	}
 	_, zoneErr := time.LoadLocation(caps.Timezone)
+	unsafeIdentity := len(caps.AccountIdentity) > 256 || strings.Contains(caps.AccountIdentity, c.token)
+	for _, r := range caps.AccountIdentity {
+		if unicode.IsControl(r) || unicode.Is(unicode.Cf, r) {
+			unsafeIdentity = true
+		}
+	}
+	for _, scope := range caps.Scopes {
+		if !safeCode(strings.ReplaceAll(scope, ":", ".")) || strings.Contains(scope, c.token) {
+			unsafeIdentity = true
+		}
+	}
 	if caps.ContractVersion != 1 || caps.AccountIdentity == "" || caps.Timezone == "" || zoneErr != nil || caps.Scopes == nil ||
 		caps.TimestampUnit != "seconds" || caps.DurationUnit != "milliseconds" || !caps.MutationRecovery ||
-		caps.RecoveryWindowSeconds < 7*24*60*60 || !caps.ConditionalStopwatches {
+		caps.RecoveryWindowSeconds < 7*24*60*60 || !caps.ConditionalStopwatches || unsafeIdentity {
 		return Capabilities{}, Failure("client.incompatible", "This server does not provide the required connected-client safety contract.", 7)
 	}
 	return caps, nil

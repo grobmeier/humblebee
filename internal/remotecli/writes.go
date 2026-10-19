@@ -41,7 +41,7 @@ func (s *commandState) writeCommand(name string, write func(context.Context, *co
 		if err != nil {
 			return err
 		}
-		return printResult(cmd, s.json, session.Profile, result)
+		return printResult(cmd, s.json, session.Profile, result, session.Client.RedactText)
 	}}
 }
 

@@ -132,6 +132,32 @@ func TestIncompleteSafetyCapabilitiesAreIncompatible(t *testing.T) {
 	}
 }
 
+func TestServerCannotReflectCredentialIntoDiagnosticsOrIdentity(t *testing.T) {
+	for _, scenario := range []string{"error", "identity"} {
+		t.Run(scenario, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				body := capabilityFixture()
+				if scenario == "identity" {
+					body["accountIdentity"] = "fixture_token"
+				} else {
+					body = map[string]any{"error": map[string]any{"code": "fixture_token", "message": "fixture_token"}}
+				}
+				_ = json.NewEncoder(w).Encode(map[string]any{"jsonrpc": "2.0", "id": 1, "result": map[string]any{"isError": scenario == "error", "structuredContent": body}})
+			}))
+			defer server.Close()
+			client, _ := NewClient(server.URL, "fixture_token", Options{AllowLoopbackHTTP: true})
+			_, err := client.Capabilities(context.Background())
+			if err == nil {
+				t.Fatal("credential echoed as identity")
+			}
+			data, _ := json.Marshal(err)
+			if strings.Contains(string(data), "fixture_token") {
+				t.Fatalf("credential reflected: %s", data)
+			}
+		})
+	}
+}
+
 func capabilityFixture() map[string]any {
 	return map[string]any{"contractVersion": 1, "accountIdentity": "user:fixture", "timezone": "Europe/Berlin",
 		"scopes":        []string{"mcp:read:projects", "mcp:read:time", "mcp:read:stopwatch", "mcp:write:time", "mcp:write:stopwatch"},

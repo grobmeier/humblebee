@@ -23,6 +23,7 @@ import (
 	"strings"
 	"time"
 	"unicode"
+	"unicode/utf16"
 
 	"github.com/grobmeier/humblebee/internal/connected"
 	"github.com/spf13/cobra"
@@ -41,10 +42,19 @@ func safeText(text string) string {
 	return output.String()
 }
 
-func printResult(cmd *cobra.Command, asJSON bool, profile connected.Profile, data any) error {
+func printResult(cmd *cobra.Command, asJSON bool, profile connected.Profile, data any, redactors ...func(string) string) error {
 	if asJSON {
-		return json.NewEncoder(cmd.OutOrStdout()).Encode(map[string]any{"version": 1, "ok": true, "profile": profile.Name,
-			"accountIdentity": profile.AccountIdentity, "timezone": profile.Timezone, "data": data})
+		output, err := json.Marshal(map[string]any{"version": 1, "ok": true, "profile": profile.Name, "accountIdentity": profile.AccountIdentity, "timezone": profile.Timezone, "data": data})
+		if err != nil {
+			return connected.Failure("client.output", "Cannot encode the remote result.", 5)
+		}
+		text := string(output) + "\n"
+		text = escapeFormatControls(text)
+		for _, redact := range redactors {
+			text = redact(text)
+		}
+		_, err = io.WriteString(cmd.OutOrStdout(), text)
+		return err
 	}
 	var text strings.Builder
 	fmt.Fprintf(&text, "Profile: %s | Account: %s | Timezone: %s\n", safeText(profile.Name), safeText(profile.AccountIdentity), safeText(profile.Timezone))
@@ -104,8 +114,31 @@ func printResult(cmd *cobra.Command, asJSON bool, profile connected.Profile, dat
 	default:
 		return connected.Failure("client.output", "Unsupported remote output.", 5)
 	}
-	_, err := io.WriteString(cmd.OutOrStdout(), text.String())
+	output := text.String()
+	for _, redact := range redactors {
+		output = redact(output)
+	}
+	_, err := io.WriteString(cmd.OutOrStdout(), output)
 	return err
+}
+
+// JSON escapes retain the original string on decoding without emitting bidi or
+// other invisible format controls directly into a terminal.
+func escapeFormatControls(text string) string {
+	var output strings.Builder
+	for _, r := range text {
+		if !unicode.Is(unicode.Cf, r) {
+			output.WriteRune(r)
+			continue
+		}
+		if r <= 0xffff {
+			fmt.Fprintf(&output, "\\u%04x", r)
+		} else {
+			high, low := utf16.EncodeRune(r)
+			fmt.Fprintf(&output, "\\u%04x\\u%04x", high, low)
+		}
+	}
+	return output.String()
 }
 
 func formatDuration(ms int64) string {
