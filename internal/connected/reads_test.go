@@ -90,3 +90,14 @@ func TestReadOperationsFilterUnavailableTasksAndUseExplicitDayUnits(t *testing.T
 		t.Fatalf("incorrect units or note: %+v", day)
 	}
 }
+
+func TestDayRejectsEntriesWithoutExplicitTimeUnits(t *testing.T) {
+	server := toolServer(t, func(string, map[string]any) any {
+		return map[string]any{"totalDurationMs": 0, "entries": []any{map[string]any{"uuid": fixtureEntry, "projectUuid": fixtureProject, "taskUuid": fixtureTask}}}
+	})
+	defer server.Close()
+	client, _ := NewClient(server.URL, "fixture-token", Options{AllowLoopbackHTTP: true})
+	if _, err := client.Day(context.Background(), "2026-03-14"); ExitCode(err) != 5 {
+		t.Fatalf("missing units accepted: %v", err)
+	}
+}

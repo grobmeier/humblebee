@@ -16,6 +16,7 @@ package connected
 
 import (
 	"context"
+	"encoding/json"
 	"math"
 	"time"
 
@@ -52,6 +53,27 @@ type Entry struct {
 	StartAtTS   int64  `json:"startAtTs"`
 	EndAtTS     int64  `json:"endAtTs"`
 	DurationMS  int64  `json:"durationMs"`
+}
+
+func (e *Entry) UnmarshalJSON(data []byte) error {
+	type plainEntry Entry
+	var wire struct {
+		*plainEntry
+		Start    *int64 `json:"startAtTs"`
+		End      *int64 `json:"endAtTs"`
+		Duration *int64 `json:"durationMs"`
+	}
+	wire.plainEntry = (*plainEntry)(e)
+	if err := json.Unmarshal(data, &wire); err != nil {
+		return err
+	}
+	if wire.Start == nil || wire.End == nil || wire.Duration == nil {
+		return invalidData()
+	}
+	e.StartAtTS = *wire.Start
+	e.EndAtTS = *wire.End
+	e.DurationMS = *wire.Duration
+	return nil
 }
 
 type Day struct {
