@@ -124,3 +124,19 @@ func TestLostBookingResponseCanBeRecoveredAfterRestartWithoutAnotherWrite(t *tes
 		t.Fatalf("unsafe recovery: %+v %v writes=%d", mutation, err, writes)
 	}
 }
+
+func TestCancelledBeforeDispatchDoesNotCreateAWriteAttempt(t *testing.T) {
+	dir := t.TempDir()
+	client, _ := NewClient("https://example.invalid", "fixture-token", Options{})
+	session := &Session{Client: client, Capabilities: Capabilities{Scopes: []string{"mcp:write:time"}}}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := session.Book(ctx, NewStore(dir, nil), Booking{ProjectUUID: fixtureProject, TaskUUID: fixtureTask, Date: "2026-03-14", Start: "09:00", End: "10:00"})
+	if ExitCode(err) != 5 {
+		t.Fatalf("pre-dispatch cancellation should be a known unsent request: %v", err)
+	}
+	files, err := os.ReadDir(dir)
+	if err != nil || len(files) != 0 {
+		t.Fatalf("unsent request created recovery state: %v %v", files, err)
+	}
+}

@@ -84,6 +84,9 @@ func uncertain(id string) *Error {
 }
 
 func (s *Session) mutate(ctx context.Context, store *Store, tool string, args map[string]any, valid func(WriteResult) bool) (WriteResult, error) {
+	if ctx.Err() != nil {
+		return WriteResult{}, Failure("client.cancelled", "Request cancelled before dispatch; no remote write was sent.", 5)
+	}
 	a, err := store.begin(s.Profile, tool)
 	if err != nil {
 		return WriteResult{}, err
