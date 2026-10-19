@@ -99,7 +99,9 @@ func (c *Client) call(ctx context.Context, tool string, args any, out any) error
 	}
 	defer response.Body.Close()
 	if response.StatusCode == http.StatusUnauthorized || response.StatusCode == http.StatusForbidden {
-		return Failure("client.authorization", "Time & Bill denied access. Check the app token and permissions.", 3)
+		problem := Failure("client.authorization", "Time & Bill denied access. Check the app token and permissions.", 3)
+		problem.definitive = true
+		return problem
 	}
 	if response.StatusCode != http.StatusOK {
 		return Failure("client.http_error", "Time & Bill returned an unsuccessful HTTP response.", 5)
@@ -127,6 +129,8 @@ func (c *Client) call(ctx context.Context, tool string, args any, out any) error
 		return Failure("client.invalid_response", "Time & Bill returned an incomplete tool response.", 5)
 	}
 	if *envelope.Result.IsError {
+		// Rejected writes may carry a durable receipt alongside the error.
+		_ = json.Unmarshal(envelope.Result.Content, out)
 		var problem struct {
 			Code  string `json:"code"`
 			Error struct {
@@ -143,7 +147,9 @@ func (c *Client) call(ctx context.Context, tool string, args any, out any) error
 		if !safeCode(code) {
 			code = "client.remote_error"
 		}
-		return remoteError(code)
+		failure := remoteError(code)
+		failure.definitive = true
+		return failure
 	}
 	if json.Unmarshal(envelope.Result.Content, out) != nil {
 		return Failure("client.invalid_response", "Time & Bill returned invalid tool data.", 5)

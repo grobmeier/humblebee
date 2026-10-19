@@ -22,6 +22,7 @@ type Error struct {
 	Message    string `json:"message"`
 	Exit       int    `json:"-"`
 	MutationID string `json:"mutationId,omitempty"`
+	definitive bool
 }
 
 func (e *Error) Error() string { return e.Message }
