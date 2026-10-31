@@ -13,16 +13,16 @@
     "test:e2e:ui": "playwright test --ui --project=chromium"
   },
   "dependencies": {
-    "lucide-react": "^1.56.0",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "lucide-react": "^1.60.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   },
   "devDependencies": {
-    "@playwright/test": "^1.64.0",
+    "@playwright/test": "^1.64.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
-    "postcss": "^8.5.30",
+    "postcss": "^8.5.31",
     "typescript": "^7.0.2",
     "vite": "^8.3.4"
   }

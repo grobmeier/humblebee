@@ -33,8 +33,8 @@ jobs:
       - name: Run Go tests
         run: go test ./...
 
-      - name: Test website release automation
-        run: node --test scripts/update-website-release.test.cjs
+      - name: Test maintenance automation
+        run: node --test scripts/*.test.cjs
 
       - name: Install frontend dependencies
         run: npm ci --prefix frontend
@@ -93,7 +93,7 @@ jobs:
         run: npm ci --prefix frontend
 
       - name: Build GUI
-        run: go run github.com/wailsapp/wails/v2/cmd/wails@v2.16.0 build -clean -tags production
+        run: go run github.com/wailsapp/wails/v2/cmd/wails@v2.17.0 build -clean -tags production
 
       - name: Verify and package macOS ARM64 GUI
         if: runner.os == 'macOS'
