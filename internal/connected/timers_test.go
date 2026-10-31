@@ -20,7 +20,7 @@ import (
 )
 
 func TestStopAndDiscardTargetObservedTimerWithDifferentBookingIntent(t *testing.T) {
-	for _, operation := range []string{"stop", "discard"} {
+	for _, operation := range []string{"stop", "stop-cleared", "discard"} {
 		t.Run(operation, func(t *testing.T) {
 			calls := 0
 			server := toolServer(t, func(tool string, args map[string]any) any {
@@ -32,15 +32,20 @@ func TestStopAndDiscardTargetObservedTimerWithDifferentBookingIntent(t *testing.
 				if args["expectedStateToken"] != "observed" || args["stopwatchId"] != float64(7) {
 					t.Error("write did not target observed state")
 				}
-				if operation == "stop" && (tool != "stop_stopwatch" || args["trackTime"] != true) {
+				if operation != "discard" && (tool != "stop_stopwatch" || args["trackTime"] != true) {
 					t.Error("stop did not explicitly book")
 				}
 				if operation == "discard" && (tool != "delete_stopwatch" || args["trackTime"] != nil) {
 					t.Error("discard could book time")
 				}
 				watch["endTime"] = 1773482400
+				if operation == "stop-cleared" {
+					delete(watch, "startTime")
+					delete(watch, "endTime")
+					watch["duration"] = 0
+				}
 				body := map[string]any{"stateToken": "new-state", "mutation": map[string]any{"id": args["clientMutationId"], "operation": tool, "state": "applied", "expiresAtTs": 1774000000, "resources": map[string]any{"stopwatchId": 7}}}
-				if operation == "stop" {
+				if operation != "discard" {
 					body["stopwatch"] = watch
 					body["timeTracked"] = true
 				} else {
@@ -54,7 +59,7 @@ func TestStopAndDiscardTargetObservedTimerWithDifferentBookingIntent(t *testing.
 				Capabilities: Capabilities{Scopes: []string{"mcp:read:stopwatch", "mcp:write:stopwatch", "mcp:write:time"}}}
 			store := NewStore(t.TempDir(), nil)
 			var err error
-			if operation == "stop" {
+			if operation != "discard" {
 				_, err = session.Stop(context.Background(), store, 0)
 			} else {
 				_, err = session.Discard(context.Background(), store, 7)

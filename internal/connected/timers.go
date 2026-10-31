@@ -76,9 +76,20 @@ func (s *Session) Stop(ctx context.Context, store *Store, id int64) (WriteResult
 		return WriteResult{}, Failure("stopwatch.not_running", "The selected stopwatch is not running. Refresh remote stopwatches.", 4)
 	}
 	return s.mutate(ctx, store, "stop_stopwatch", map[string]any{"stopwatchId": id, "expectedStateToken": state.StateToken, "trackTime": true}, func(result WriteResult) bool {
-		return result.StateToken != "" && result.Stopwatch != nil && result.Stopwatch.ID == id && result.Stopwatch.EndTime != nil &&
+		return result.StateToken != "" && bookedStopwatch(result.Stopwatch) && result.Stopwatch.ID == id &&
 			result.Mutation.Resources.StopwatchID == id && result.TimeTracked != nil && *result.TimeTracked
 	})
+}
+
+// A booked interval may be cleared so the same stopwatch is ready to start again.
+func bookedStopwatch(watch *Stopwatch) bool {
+	if watch == nil {
+		return false
+	}
+	if watch.StartTime == nil {
+		return watch.EndTime == nil && watch.DurationMS == 0
+	}
+	return watch.EndTime != nil && *watch.EndTime >= *watch.StartTime
 }
 
 func (s *Session) Discard(ctx context.Context, store *Store, id int64) (WriteResult, error) {
