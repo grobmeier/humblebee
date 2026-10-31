@@ -65,11 +65,11 @@ xcrun notarytool store-credentials humblebee-notary
 2. Confirm the intended changes are merged and pushed to `main`, the working tree
    is clean, and CI is green, including macOS/Windows/Linux GUI builds. Use the Go
    version in `go.mod` and keep the Wails CLI aligned with the module dependency.
-3. Install the locked frontend dependencies and validate the publisher:
+3. Install the locked frontend dependencies and validate maintenance automation:
 
    ```bash
    npm ci --prefix frontend
-   node --test scripts/update-website-release.test.cjs
+   node --test scripts/*.test.cjs
    ```
 
 4. Run the interactive helper from the repository root:
@@ -101,6 +101,30 @@ xcrun notarytool store-credentials humblebee-notary
 
 Do not move or delete a published release tag to repair a failure. Retry the
 failed stage with the original tag, or publish a new version for source changes.
+
+## Dependency Security Checks
+
+For security maintenance, check the compiler as well as module versions. Use a
+supported, patched Go toolchain meeting the minimum in `go.mod`; a dependency
+upgrade alone cannot fix vulnerabilities in the standard library used to build
+the executable.
+
+```bash
+go version
+go mod verify
+go mod tidy -diff
+go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+```
+
+Also scan built CLI and GUI executables with `govulncheck -mode=binary` where
+supported, because production build tags and platform dependencies can differ
+from the source scan. Record the tested source revision, compiler and scan
+results. A clean scan is not a guarantee that no vulnerabilities exist.
+
+Keep Wails CLI pins aligned with its module version. The maintenance tests check
+CI, GUI release, macOS packaging and contributor commands. Validate combined
+dependency updates with the browser suite and all three native GUI CI builds;
+in particular, keep React and React DOM on compatible matching versions.
 
 ## macOS Signing
 
