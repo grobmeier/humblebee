@@ -33,6 +33,21 @@ Cross-compilation is not Windows/Linux runtime or native-vault acceptance. The
 lost-response fixture proves a new client can recover using durable local metadata;
 it is not a literal server-process restart or production upgrade rehearsal.
 
+## Native Credential Acceptance
+
+The opt-in test writes a unique dummy secret to the real OS credential store,
+verifies retrieval, deletes it and checks that it is no longer readable. Run it
+only with explicit approval on a developer machine or inside disposable CI:
+
+```sh
+HUMBLEBEE_NATIVE_KEYRING_TEST=1 go test ./internal/connected \
+  -run '^TestNativeCredentialStoreRoundTrip$' -count=1
+```
+
+CI runs it against Windows Credential Manager, macOS Keychain and a disposable
+Linux D-Bus/Secret Service session. Ordinary test runs skip it and never write
+the user's vault. The test uses no Time & Bill token or pre-existing entry.
+
 ## Local Verification Record
 
 On 2026-10-19, source revision `bee76f1` passed the complete Go suite:
@@ -43,6 +58,21 @@ tests cross-compiled successfully. No real OS-vault write or live account was
 used. In particular, the subprocess test drops a booking response, launches a
 second CLI process and recovers the original ID with exactly one server write,
 while a fixture local database remains byte-for-byte unchanged.
+
+On 2026-10-31, the pilot was integrated with current main and the patched Go
+1.26.10 compiler. The full Go and race suites, static checks and vulnerability
+scan passed. Real native-vault CI checks passed on Linux, Windows and macOS;
+an explicitly approved local macOS dummy-secret round-trip also passed and
+removed its entry. Locked or denied desktop-vault prompts remain manual checks.
+
+Separately, the server repository's opt-in process acceptance test ran this CLI
+against real loopback server JVMs with disposable fixture data. It dropped a
+committed booking response, restarted the server process and recovered exactly
+one manual entry through a new CLI process. It also verified Unicode/multiline
+notes, same-task starts, discard, a web-created timer's booked stop, token
+revocation and unchanged local database sentinel bytes. The test reproduced and
+verified a correction for the server's cleared-timer response after booking.
+This is real local interoperability, not a deployed staging/production sign-off.
 
 ## Manual CLI Checks
 
