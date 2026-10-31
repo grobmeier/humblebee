@@ -43,6 +43,14 @@ go build -o bin/humblebee ./cmd/humblebee
 humblebee help
 ```
 
+## Time & Bill Connected CLI Pilot
+
+The optional, online-only `humblebee remote` commands use an explicit Time & Bill
+profile without changing local commands or opening a local database. They require
+the hardened server safety contract; this pilot is not a GUI mode or offline sync.
+See the [connected CLI guide](docs/connected-cli.md) and
+[test/release gates](docs/connected-cli-test-plan.md) before enabling it.
+
 ## GUI
 
 HumbleBee also ships a standalone local-first GUI built with Wails and React. The GUI uses the same local database format as the CLI, but it does not require the CLI to be installed.
