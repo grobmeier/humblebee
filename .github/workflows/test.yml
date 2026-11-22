@@ -58,6 +58,47 @@ jobs:
             frontend/test-results/
           if-no-files-found: ignore
 
+  native-credentials:
+    name: Native credentials (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-15]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install isolated Linux vault dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y dbus-x11 gnome-keyring
+
+      - name: Test Linux Secret Service in a disposable session
+        if: runner.os == 'Linux'
+        env:
+          HUMBLEBEE_NATIVE_KEYRING_TEST: "1"
+        run: |
+          export XDG_DATA_HOME="$RUNNER_TEMP/humblebee-vault-data"
+          dbus-run-session -- bash -euo pipefail -c '
+            printf "%s" "acceptance-only" | gnome-keyring-daemon --unlock --components=secrets
+            go test ./internal/connected -run "^TestNativeCredentialStoreRoundTrip$" -count=1
+          '
+
+      - name: Test native credential storage with a dummy secret
+        if: runner.os != 'Linux'
+        env:
+          HUMBLEBEE_NATIVE_KEYRING_TEST: "1"
+        run: go test ./internal/connected -run "^TestNativeCredentialStoreRoundTrip$" -count=1
+
   gui-build:
     name: GUI build (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
