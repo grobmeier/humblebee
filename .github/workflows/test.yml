@@ -93,7 +93,7 @@ jobs:
         run: npm ci --prefix frontend
 
       - name: Build GUI
-        run: go run github.com/wailsapp/wails/v2/cmd/wails@v2.17.0 build -clean -tags production
+        run: go run github.com/wailsapp/wails/v2/cmd/wails@v2.17.1 build -clean -tags production
 
       - name: Verify and package macOS ARM64 GUI
         if: runner.os == 'macOS'
